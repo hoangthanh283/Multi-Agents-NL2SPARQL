@@ -1,0 +1,13 @@
+{
+  "id": "property_values",
+  "name": "Get specific property values",
+  "description": "Returns values of a specific property for instances of a class",
+  "query_type": "SELECT",
+  "keywords": ["what", "value", "who", "has", "with"],
+  "requires": {
+    "classes": 1,
+    "properties": 1,
+    "instances": 0
+  },
+  "pattern": "SELECT ?instance ?value\nWHERE {\n  ?instance a <{class_uri}> .\n  ?instance <{property_uri}> ?value .\n  OPTIONAL { ?instance rdfs:label ?label . }\n}"
+}

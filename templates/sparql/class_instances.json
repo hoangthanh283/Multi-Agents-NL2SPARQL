@@ -1,0 +1,13 @@
+{
+  "id": "class_instances",
+  "name": "Get all instances of a class",
+  "description": "Returns all instances of a specific class",
+  "query_type": "SELECT",
+  "keywords": ["what", "instances", "list", "all", "show"],
+  "requires": {
+    "classes": 1,
+    "properties": 0,
+    "instances": 0
+  },
+  "pattern": "SELECT ?instance ?label\nWHERE {\n  ?instance a <{class_uri}> .\n  OPTIONAL { ?instance rdfs:label ?label . }\n}"
+}

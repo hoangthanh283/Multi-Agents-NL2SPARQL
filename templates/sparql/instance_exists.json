@@ -1,0 +1,13 @@
+{
+  "id": "instance_exists",
+  "name": "Check if an instance exists",
+  "description": "Checks if a specific instance exists with certain properties",
+  "query_type": "ASK",
+  "keywords": ["exists", "is there", "does", "has", "check"],
+  "requires": {
+    "classes": 0,
+    "properties": 1,
+    "instances": 1
+  },
+  "pattern": "ASK {\n  <{instance_uri}> <{property_uri}> ?value .\n}"
+}

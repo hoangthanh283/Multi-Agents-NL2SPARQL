@@ -1,0 +1,13 @@
+{
+  "id": "filtered_instances",
+  "name": "Get filtered instances",
+  "description": "Returns instances of a class with property values matching a filter",
+  "query_type": "SELECT",
+  "keywords": ["where", "filter", "greater", "less", "equal", "contains"],
+  "requires": {
+    "classes": 1,
+    "properties": 1,
+    "literals": 1
+  },
+  "pattern": "SELECT ?instance ?label\nWHERE {\n  ?instance a <{class_uri}> .\n  ?instance <{property_uri}> ?value .\n  OPTIONAL { ?instance rdfs:label ?label . }\n  FILTER ({filter_condition})\n}"
+}

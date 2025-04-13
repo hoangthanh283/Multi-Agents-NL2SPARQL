@@ -1,0 +1,13 @@
+{
+  "id": "instance_properties",
+  "name": "Get all properties of an instance",
+  "description": "Returns all properties and values for a specific instance",
+  "query_type": "SELECT",
+  "keywords": ["properties", "attributes", "information", "details", "about"],
+  "requires": {
+    "classes": 0,
+    "properties": 0,
+    "instances": 1
+  },
+  "pattern": "SELECT ?property ?value\nWHERE {\n  <{instance_uri}> ?property ?value .\n}"
+}

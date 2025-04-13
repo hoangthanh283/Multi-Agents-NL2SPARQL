@@ -1,0 +1,439 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix acad: <http://example.org/academic/> .
+
+# Ontology metadata
+<http://example.org/academic> rdf:type owl:Ontology ;
+    rdfs:label "Academic Domain Ontology"@en ;
+    rdfs:comment "A simple ontology for academic institutions, people, publications, and research"@en .
+
+# Classes
+
+# Person classes
+acad:Person rdf:type owl:Class ;
+    rdfs:label "Person"@en ;
+    rdfs:comment "A human being"@en .
+
+acad:Researcher rdf:type owl:Class ;
+    rdfs:subClassOf acad:Person ;
+    rdfs:label "Researcher"@en ;
+    rdfs:comment "A person who conducts research"@en .
+
+acad:Professor rdf:type owl:Class ;
+    rdfs:subClassOf acad:Researcher ;
+    rdfs:label "Professor"@en ;
+    rdfs:comment "A teacher at a university or college"@en .
+
+acad:Student rdf:type owl:Class ;
+    rdfs:subClassOf acad:Person ;
+    rdfs:label "Student"@en ;
+    rdfs:comment "A person who studies at an educational institution"@en .
+
+acad:GraduateStudent rdf:type owl:Class ;
+    rdfs:subClassOf acad:Student ;
+    rdfs:label "Graduate Student"@en ;
+    rdfs:comment "A student who is studying for a graduate degree"@en .
+
+acad:UndergraduateStudent rdf:type owl:Class ;
+    rdfs:subClassOf acad:Student ;
+    rdfs:label "Undergraduate Student"@en ;
+    rdfs:comment "A student who is studying for a bachelor's degree"@en .
+
+# Organization classes
+acad:Organization rdf:type owl:Class ;
+    rdfs:label "Organization"@en ;
+    rdfs:comment "A structured group of people with a particular purpose"@en .
+
+acad:EducationalInstitution rdf:type owl:Class ;
+    rdfs:subClassOf acad:Organization ;
+    rdfs:label "Educational Institution"@en ;
+    rdfs:comment "An institution dedicated to education"@en .
+
+acad:University rdf:type owl:Class ;
+    rdfs:subClassOf acad:EducationalInstitution ;
+    rdfs:label "University"@en ;
+    rdfs:comment "A high-level educational institution for research and teaching"@en .
+
+acad:Department rdf:type owl:Class ;
+    rdfs:subClassOf acad:Organization ;
+    rdfs:label "Department"@en ;
+    rdfs:comment "An administrative division of a university"@en .
+
+acad:ResearchGroup rdf:type owl:Class ;
+    rdfs:subClassOf acad:Organization ;
+    rdfs:label "Research Group"@en ;
+    rdfs:comment "A group of researchers working on related topics"@en .
+
+# Publication classes
+acad:Publication rdf:type owl:Class ;
+    rdfs:label "Publication"@en ;
+    rdfs:comment "A published work"@en .
+
+acad:Article rdf:type owl:Class ;
+    rdfs:subClassOf acad:Publication ;
+    rdfs:label "Article"@en ;
+    rdfs:comment "A written work published in a journal, magazine, or newspaper"@en .
+
+acad:ConferencePaper rdf:type owl:Class ;
+    rdfs:subClassOf acad:Publication ;
+    rdfs:label "Conference Paper"@en ;
+    rdfs:comment "A paper presented at a conference and published in conference proceedings"@en .
+
+acad:Book rdf:type owl:Class ;
+    rdfs:subClassOf acad:Publication ;
+    rdfs:label "Book"@en ;
+    rdfs:comment "A written or printed work consisting of pages bound together"@en .
+
+acad:Thesis rdf:type owl:Class ;
+    rdfs:subClassOf acad:Publication ;
+    rdfs:label "Thesis"@en ;
+    rdfs:comment "A dissertation advancing an original point of view as a result of research"@en .
+
+# Academic fields
+acad:AcademicField rdf:type owl:Class ;
+    rdfs:label "Academic Field"@en ;
+    rdfs:comment "A branch of knowledge"@en .
+
+acad:ComputerScience rdf:type owl:Class ;
+    rdfs:subClassOf acad:AcademicField ;
+    rdfs:label "Computer Science"@en ;
+    rdfs:comment "The study of computers and computational systems"@en .
+
+acad:Physics rdf:type owl:Class ;
+    rdfs:subClassOf acad:AcademicField ;
+    rdfs:label "Physics"@en ;
+    rdfs:comment "The study of matter, energy, and the interactions between them"@en .
+
+acad:Mathematics rdf:type owl:Class ;
+    rdfs:subClassOf acad:AcademicField ;
+    rdfs:label "Mathematics"@en ;
+    rdfs:comment "The study of numbers, quantities, and shapes"@en .
+
+acad:Biology rdf:type owl:Class ;
+    rdfs:subClassOf acad:AcademicField ;
+    rdfs:label "Biology"@en ;
+    rdfs:comment "The study of living organisms"@en .
+
+# Course
+acad:Course rdf:type owl:Class ;
+    rdfs:label "Course"@en ;
+    rdfs:comment "A series of lectures or lessons in a particular subject"@en .
+
+# Event
+acad:Event rdf:type owl:Class ;
+    rdfs:label "Event"@en ;
+    rdfs:comment "A significant occurrence or happening"@en .
+
+acad:Conference rdf:type owl:Class ;
+    rdfs:subClassOf acad:Event ;
+    rdfs:label "Conference"@en ;
+    rdfs:comment "A formal meeting for discussion"@en .
+
+acad:Workshop rdf:type owl:Class ;
+    rdfs:subClassOf acad:Event ;
+    rdfs:label "Workshop"@en ;
+    rdfs:comment "A meeting at which a group of people engage in intensive discussion and activity"@en .
+
+# Properties
+
+# Person properties
+acad:name rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range xsd:string ;
+    rdfs:label "name"@en ;
+    rdfs:comment "The name of a person"@en .
+
+acad:email rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range xsd:string ;
+    rdfs:label "email"@en ;
+    rdfs:comment "The email address of a person"@en .
+
+acad:birthDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range xsd:date ;
+    rdfs:label "birth date"@en ;
+    rdfs:comment "The date of birth of a person"@en .
+
+acad:title rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range xsd:string ;
+    rdfs:label "title"@en ;
+    rdfs:comment "The title of a person (e.g., Dr., Prof.)"@en .
+
+# Organization properties
+acad:organizationName rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Organization ;
+    rdfs:range xsd:string ;
+    rdfs:label "organization name"@en ;
+    rdfs:comment "The name of an organization"@en .
+
+acad:location rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Organization ;
+    rdfs:range xsd:string ;
+    rdfs:label "location"@en ;
+    rdfs:comment "The location of an organization"@en .
+
+acad:established rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Organization ;
+    rdfs:range xsd:gYear ;
+    rdfs:label "established"@en ;
+    rdfs:comment "The year an organization was established"@en .
+
+# Publication properties
+acad:title rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range xsd:string ;
+    rdfs:label "title"@en ;
+    rdfs:comment "The title of a publication"@en .
+
+acad:publicationDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range xsd:date ;
+    rdfs:label "publication date"@en ;
+    rdfs:comment "The date a work was published"@en .
+
+acad:abstract rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range xsd:string ;
+    rdfs:label "abstract"@en ;
+    rdfs:comment "A summary of a publication"@en .
+
+acad:doi rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range xsd:string ;
+    rdfs:label "DOI"@en ;
+    rdfs:comment "Digital Object Identifier for a publication"@en .
+
+# Course properties
+acad:courseCode rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Course ;
+    rdfs:range xsd:string ;
+    rdfs:label "course code"@en ;
+    rdfs:comment "The code identifying a course"@en .
+
+acad:courseDescription rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Course ;
+    rdfs:range xsd:string ;
+    rdfs:label "course description"@en ;
+    rdfs:comment "A description of a course's content"@en .
+
+acad:credits rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Course ;
+    rdfs:range xsd:integer ;
+    rdfs:label "credits"@en ;
+    rdfs:comment "The number of credits awarded for completing a course"@en .
+
+# Event properties
+acad:eventDate rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Event ;
+    rdfs:range xsd:date ;
+    rdfs:label "event date"@en ;
+    rdfs:comment "The date of an event"@en .
+
+acad:eventLocation rdf:type owl:DatatypeProperty ;
+    rdfs:domain acad:Event ;
+    rdfs:range xsd:string ;
+    rdfs:label "event location"@en ;
+    rdfs:comment "The location of an event"@en .
+
+# Relationships (Object Properties)
+
+acad:affiliatedWith rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range acad:Organization ;
+    rdfs:label "affiliated with"@en ;
+    rdfs:comment "Relates a person to an organization they are affiliated with"@en .
+
+acad:memberOf rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range acad:Organization ;
+    rdfs:label "member of"@en ;
+    rdfs:comment "Relates a person to an organization they are a member of"@en .
+
+acad:hasAuthor rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range acad:Person ;
+    rdfs:label "has author"@en ;
+    rdfs:comment "Relates a publication to its author"@en .
+
+acad:authorOf rdf:type owl:ObjectProperty ;
+    owl:inverseOf acad:hasAuthor ;
+    rdfs:domain acad:Person ;
+    rdfs:range acad:Publication ;
+    rdfs:label "author of"@en ;
+    rdfs:comment "Relates an author to their publication"@en .
+
+acad:supervises rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Professor ;
+    rdfs:range acad:Student ;
+    rdfs:label "supervises"@en ;
+    rdfs:comment "Relates a professor to a student they supervise"@en .
+
+acad:supervisedBy rdf:type owl:ObjectProperty ;
+    owl:inverseOf acad:supervises ;
+    rdfs:domain acad:Student ;
+    rdfs:range acad:Professor ;
+    rdfs:label "supervised by"@en ;
+    rdfs:comment "Relates a student to their supervising professor"@en .
+
+acad:teaches rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Professor ;
+    rdfs:range acad:Course ;
+    rdfs:label "teaches"@en ;
+    rdfs:comment "Relates a professor to a course they teach"@en .
+
+acad:takes rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Student ;
+    rdfs:range acad:Course ;
+    rdfs:label "takes"@en ;
+    rdfs:comment "Relates a student to a course they are taking"@en .
+
+acad:worksIn rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Researcher ;
+    rdfs:range acad:AcademicField ;
+    rdfs:label "works in"@en ;
+    rdfs:comment "Relates a researcher to an academic field they work in"@en .
+
+acad:partOf rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Department ;
+    rdfs:range acad:University ;
+    rdfs:label "part of"@en ;
+    rdfs:comment "Relates a department to the university it is part of"@en .
+
+acad:organizes rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Organization ;
+    rdfs:range acad:Event ;
+    rdfs:label "organizes"@en ;
+    rdfs:comment "Relates an organization to an event it organizes"@en .
+
+acad:attends rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Person ;
+    rdfs:range acad:Event ;
+    rdfs:label "attends"@en ;
+    rdfs:comment "Relates a person to an event they attend"@en .
+
+acad:publishedIn rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range xsd:string ;
+    rdfs:label "published in"@en ;
+    rdfs:comment "Relates a publication to the venue it was published in"@en .
+
+acad:cites rdf:type owl:ObjectProperty ;
+    rdfs:domain acad:Publication ;
+    rdfs:range acad:Publication ;
+    rdfs:label "cites"@en ;
+    rdfs:comment "Relates a publication to another publication it cites"@en .
+
+acad:citedBy rdf:type owl:ObjectProperty ;
+    owl:inverseOf acad:cites ;
+    rdfs:domain acad:Publication ;
+    rdfs:range acad:Publication ;
+    rdfs:label "cited by"@en ;
+    rdfs:comment "Relates a publication to another publication that cites it"@en .
+
+# Sample Instances (just a few to demonstrate the ontology)
+
+# Universities
+acad:StanfordUniversity rdf:type acad:University ;
+    acad:organizationName "Stanford University"@en ;
+    acad:location "Stanford, California, USA"@en ;
+    acad:established "1885"^^xsd:gYear .
+
+acad:MIT rdf:type acad:University ;
+    acad:organizationName "Massachusetts Institute of Technology"@en ;
+    acad:location "Cambridge, Massachusetts, USA"@en ;
+    acad:established "1861"^^xsd:gYear .
+
+# Departments
+acad:StanfordCS rdf:type acad:Department ;
+    acad:organizationName "Stanford Computer Science Department"@en ;
+    acad:partOf acad:StanfordUniversity .
+
+acad:MITCSAIL rdf:type acad:Department ;
+    acad:organizationName "MIT Computer Science and Artificial Intelligence Laboratory"@en ;
+    acad:partOf acad:MIT .
+
+# Professors
+acad:JohnSmith rdf:type acad:Professor ;
+    acad:name "John Smith"@en ;
+    acad:email "john.smith@stanford.edu"@en ;
+    acad:title "Professor"@en ;
+    acad:affiliatedWith acad:StanfordUniversity ;
+    acad:memberOf acad:StanfordCS ;
+    acad:worksIn acad:ComputerScience .
+
+acad:JaneJones rdf:type acad:Professor ;
+    acad:name "Jane Jones"@en ;
+    acad:email "jane.jones@mit.edu"@en ;
+    acad:title "Associate Professor"@en ;
+    acad:affiliatedWith acad:MIT ;
+    acad:memberOf acad:MITCSAIL ;
+    acad:worksIn acad:ComputerScience .
+
+# Students
+acad:BobBrown rdf:type acad:GraduateStudent ;
+    acad:name "Bob Brown"@en ;
+    acad:email "bob.brown@stanford.edu"@en ;
+    acad:affiliatedWith acad:StanfordUniversity ;
+    acad:supervisedBy acad:JohnSmith .
+
+acad:AliceAdams rdf:type acad:UndergraduateStudent ;
+    acad:name "Alice Adams"@en ;
+    acad:email "alice.adams@mit.edu"@en ;
+    acad:affiliatedWith acad:MIT .
+
+# Publications
+acad:Paper1 rdf:type acad:Article ;
+    acad:title "Advances in Natural Language Processing"@en ;
+    acad:publicationDate "2022-06-15"^^xsd:date ;
+    acad:abstract "This paper presents recent advances in NLP..."@en ;
+    acad:doi "10.1234/nlp.2022.123"@en ;
+    acad:hasAuthor acad:JohnSmith ;
+    acad:publishedIn "Journal of Artificial Intelligence Research"@en .
+
+acad:Paper2 rdf:type acad:ConferencePaper ;
+    acad:title "Machine Learning for Knowledge Graphs"@en ;
+    acad:publicationDate "2023-01-20"^^xsd:date ;
+    acad:abstract "This paper explores ML techniques for KGs..."@en ;
+    acad:hasAuthor acad:JaneJones ;
+    acad:publishedIn "Proceedings of AAAI 2023"@en ;
+    acad:cites acad:Paper1 .
+
+# Courses
+acad:CS101 rdf:type acad:Course ;
+    acad:title "Introduction to Computer Science"@en ;
+    acad:courseCode "CS101"@en ;
+    acad:courseDescription "An introductory course to computer science principles"@en ;
+    acad:credits "3"^^xsd:integer .
+
+acad:CS307 rdf:type acad:Course ;
+    acad:title "Advanced Algorithms"@en ;
+    acad:courseCode "CS307"@en ;
+    acad:courseDescription "A graduate-level course on advanced algorithms"@en ;
+    acad:credits "4"^^xsd:integer .
+
+# Teaching relationships
+acad:JohnSmith acad:teaches acad:CS101 .
+acad:JaneJones acad:teaches acad:CS307 .
+acad:BobBrown acad:takes acad:CS307 .
+acad:AliceAdams acad:takes acad:CS101 .
+
+# Events
+acad:AAAI2023 rdf:type acad:Conference ;
+    acad:title "AAAI Conference on Artificial Intelligence 2023"@en ;
+    acad:eventDate "2023-02-07"^^xsd:date ;
+    acad:eventLocation "Washington, DC, USA"@en .
+
+acad:NLPWorkshop2022 rdf:type acad:Workshop ;
+    acad:title "Workshop on Natural Language Processing 2022"@en ;
+    acad:eventDate "2022-11-15"^^xsd:date ;
+    acad:eventLocation "Stanford University, USA"@en .
+
+# Event relationships
+acad:StanfordCS acad:organizes acad:NLPWorkshop2022 .
+acad:JohnSmith acad:attends acad:NLPWorkshop2022 .
+acad:JaneJones acad:attends acad:AAAI2023 .
+acad:BobBrown acad:attends acad:NLPWorkshop2022 .
