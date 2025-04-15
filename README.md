@@ -179,27 +179,116 @@ Support for various SPARQL query forms:
 
 ## Setup and Installation
 
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Prerequisites
 
-2. Set up environment variables:
-   ```bash
-   export OPENAI_API_KEY=your_openai_api_key
-   export QDRANT_URL=your_qdrant_url
-   export QDRANT_API_KEY=your_qdrant_api_key
-   export GRAPHDB_ENDPOINT=your_graphdv_endpoint
-   ```
+- Python 3.9 or higher
+- Docker and Docker Compose
+- At least 8GB of RAM recommended
+- Basic knowledge of Docker commands
 
-3. Configure ontology access:
-   - Provide a local ontology file or
-   - Configure a SPARQL endpoint for remote ontology access
+### 1. Docker Setup
 
-4. Initialize the system:
-   ```bash
-   python main.py
-   ```
+First, set up the required services using Docker:
+
+1. Create a `docker-compose.yml` file:
+```yaml
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+  graphdb:
+    image: ontotext/graphdb:10.6.0
+    ports:
+      - "7200:7200"
+    environment:
+      - GDB_HEAP_SIZE=4g
+      - GDB_MIN_MEM=1g
+      - GDB_MAX_MEM=4g
+    volumes:
+      - graphdb_data:/opt/graphdb/home
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  elasticsearch_data:
+  graphdb_data:
+```
+
+2. Start the services:
+```bash
+docker-compose up -d
+```
+
+3. Verify the services are running:
+- Qdrant: Visit `http://localhost:6333/dashboard`
+- Elasticsearch: Visit `http://localhost:9200`
+- GraphDB: Visit `http://localhost:7200`
+
+### 2. Python Environment Setup
+
+1. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file with the following variables:
+```bash
+# OpenAI API
+OPENAI_API_KEY=your_openai_api_key
+
+# Database URLs
+QDRANT_URL=http://localhost:6333
+ELASTICSEARCH_URL=http://localhost:9200
+GRAPHDB_URL=http://localhost:7200
+GRAPHDB_REPOSITORY=your-repo-name
+```
+
+### 4. Initialize the System
+
+1. Start the application:
+```bash
+python main.py
+```
+
+2. Access the Gradio interface at `http://localhost:7860`
+
+### Troubleshooting
+
+1. **Port Conflicts**: If you get port conflict errors, change the port mappings in the `docker-compose.yml` file.
+2. **Memory Issues**: Adjust the memory settings in the `docker-compose.yml` if you encounter out-of-memory errors.
+3. **Service Health**: Use `docker-compose ps` to check if all services are running properly.
+4. **Cleanup**: To remove all containers and volumes:
+```bash
+docker-compose down -v
+```
 
 ## Usage Examples
 
