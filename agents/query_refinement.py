@@ -1,4 +1,3 @@
-import json
 from typing import Any, Dict, List, Optional
 
 import autogen
@@ -79,17 +78,8 @@ class QueryRefinementAgent:
                 message=prompt
             )
             
-            # Extract the refined query from the response
-            # Handle different response types correctly
-            if hasattr(response, 'content'):
-                # It's likely an Autogen ChatResult object
-                refined_query = response.content.strip()
-            elif isinstance(response, dict) and 'content' in response:
-                # It's a dictionary with content key
-                refined_query = response['content'].strip()
-            else:
-                # Try to convert to string as a fallback
-                refined_query = str(response).strip()
+            # Extract the refined query from the response.
+            refined_query = response.summary.strip()
             
             # Clean up the response if needed (remove quotes, explanation text, etc.)
             if refined_query.startswith('"') and refined_query.endswith('"'):
@@ -338,7 +328,6 @@ Include specific entity names whenever they're referenced directly or indirectly
                     }
                 ]
             )
-            
             return True
         except Exception as e:
             print(f"Error storing refinement example: {e}")

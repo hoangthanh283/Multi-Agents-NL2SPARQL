@@ -219,9 +219,7 @@ Return your validation result in the following JSON format:
             self.agent,
             message=prompt
         )
-        
-        # Extract the result from the response
-        response_text = response.get("content", "").strip()
+        response_text = response.summary.strip()
         
         # Parse the JSON result
         try:

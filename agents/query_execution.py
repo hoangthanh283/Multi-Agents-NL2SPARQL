@@ -1,13 +1,13 @@
-import json
-import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
                            SPARQLWrapper)
 
 # Configure logging
-logger = logging.getLogger(__name__)
+from utils.logging_utils import setup_logging
+
+logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class QueryExecutionAgent:
     """

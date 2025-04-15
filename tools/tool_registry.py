@@ -1,10 +1,10 @@
-# tools/tool_registry.py
 import json
-import logging
 import os
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
+from utils.logging_utils import setup_logging
+
+logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class ToolRegistry:
     """

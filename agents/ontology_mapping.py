@@ -120,8 +120,6 @@ Analyze the context, term descriptions, and ontology structure to find the best 
         for entity_type, entity_list in entities.items():
             for entity in entity_list:
                 entity_text = entity.get("text", "")
-                
-                # Skip empty entities
                 if not entity_text:
                     continue
                 
@@ -154,7 +152,6 @@ Analyze the context, term descriptions, and ontology structure to find the best 
                         "text": entity_text,
                         "inferred_type": literal_type
                     })
-                
                 else:
                     # Unknown entity type, try general mapping
                     mapped_term = self._general_term_mapping(entity_text, query_context)
@@ -164,18 +161,16 @@ Analyze the context, term descriptions, and ontology structure to find the best 
                     else:
                         mapped_entities["unknown"].append({"text": entity_text, "type": "UNKNOWN"})
         
-        # For entities that couldn't be mapped automatically, use LLM-based mapping
+        # For entities that couldn't be mapped automatically, use LLM-based mapping.
         if mapped_entities["unknown"]:
             llm_mapped = self._llm_based_mapping(mapped_entities["unknown"], query_context, mapped_entities)
-            
             # Update mapped entities with LLM results
             for category, items in llm_mapped.items():
                 if category != "unknown":
                     mapped_entities[category].extend(items)
             
-            # Update unknown list to only contain truly unmapped entities
+            # Update unknown list to only contain truly unmapped entities.
             mapped_entities["unknown"] = llm_mapped.get("unknown", [])
-        
         return mapped_entities
     
     def _load_local_ontology(self, ontology_path: str):
@@ -324,7 +319,6 @@ Analyze the context, term descriptions, and ontology structure to find the best 
         
         # If no exact match, try semantic matching
         matches = self._semantic_match(entity_text, self.class_hierarchy, "class")
-        
         if matches:
             best_match = matches[0]
             return {
@@ -334,8 +328,7 @@ Analyze the context, term descriptions, and ontology structure to find the best 
                 "type": "class",
                 "confidence": best_match["similarity"]
             }
-        
-        return None
+        return
     
     def _map_to_property(
         self, 
@@ -369,7 +362,6 @@ Analyze the context, term descriptions, and ontology structure to find the best 
         
         # If no exact match, try semantic matching
         matches = self._semantic_match(entity_text, self.property_domains_ranges, "property")
-        
         if matches:
             best_match = matches[0]
             prop_info = self.property_domains_ranges[best_match["uri"]]
@@ -383,8 +375,7 @@ Analyze the context, term descriptions, and ontology structure to find the best 
                 "ranges": prop_info["ranges"],
                 "confidence": best_match["similarity"]
             }
-        
-        return None
+        return
     
     def _map_to_instance(
         self, 
@@ -518,10 +509,8 @@ Analyze the context, term descriptions, and ontology structure to find the best 
         if instance_mapping and instance_mapping.get("confidence", 0) > 0.7:
             instance_mapping["category"] = "instances"
             return instance_mapping
-        
-        # No confident match found
-        return None
-    
+        return
+
     def _semantic_match(
         self, 
         text: str, 
@@ -547,8 +536,6 @@ Analyze the context, term descriptions, and ontology structure to find the best 
         for uri, term_info in term_dict.items():
             # Get labels and comments for semantic matching
             labels = term_info.get("labels", [])
-            comments = term_info.get("comments", [])
-            
             best_similarity = 0
             best_match_text = ""
             
@@ -655,15 +642,11 @@ Return your mapping in the following JSON format:
 }}
 ```
         """
-        
         # Get mapping from the LLM
-        response = self.proxy.initiate_chat(
-            self.agent,
-            message=prompt
-        )
-        
-        # Extract the mapping from the response
-        response_text = response.get("content", "").strip()
+        response = self.proxy.initiate_chat(self.agent, message=prompt)
+
+        # Extract the mapping from the ChatResult response.
+        response_text = response.summary.strip()
         
         # Parse the JSON result
         try:
@@ -764,5 +747,4 @@ Return your mapping in the following JSON format:
             context += "\nMapped Literals:\n"
             for entity in mapped_entities["literals"]:
                 context += f"- '{entity['text']}' -> {entity['inferred_type']}\n"
-        
         return context

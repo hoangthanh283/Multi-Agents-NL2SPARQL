@@ -13,7 +13,7 @@ class GLiNERModel:
     
     def __init__(
         self, 
-        model_name_or_path: str = "microsoft/gliner",
+        model_name_or_path: str = "urchade/gliner_small-v1",
         device: Optional[str] = None
     ):
         """
@@ -31,7 +31,7 @@ class GLiNERModel:
         else:
             self.device = device
             
-        # Load model and tokenizer
+        # Load model and tokenizer.
         try:
             self.model = AutoModelForTokenClassification.from_pretrained(model_name_or_path)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)

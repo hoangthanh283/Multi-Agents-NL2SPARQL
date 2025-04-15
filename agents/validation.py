@@ -1,5 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
+import re
+from typing import Any, Dict, List
 
 import autogen
 
@@ -259,12 +260,8 @@ Return your validation result in the following JSON format:
             Validation result dictionary
         """
         # Extract the result from the response
-        response_text = response.get("content", "").strip()
-        
-        # Parse the JSON result
+        response_text = response.summary.strip()
         try:
-            # Find JSON content in response
-            import re
             json_match = re.search(r'```(?:json)?\s*({\s*"is_valid".*?})\s*```', response_text, re.DOTALL)
             
             if json_match:
@@ -290,5 +287,4 @@ Return your validation result in the following JSON format:
                 "validation_type": "parsing",
                 "feedback": f"Error parsing validation result: {str(e)}"
             }
-        
         return validation_result

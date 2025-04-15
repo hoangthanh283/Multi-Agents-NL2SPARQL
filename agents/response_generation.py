@@ -34,7 +34,8 @@ class ResponseGenerationAgent:
     
     def generate_response(
         self, 
-        refined_query: str, 
+        refined_query: str,
+        sparql_query: str,
         execution_results: Dict[str, Any]
     ) -> str:
         """
@@ -42,32 +43,30 @@ class ResponseGenerationAgent:
         
         Args:
             refined_query: The refined user query
+            sparql_query: The current SPARQL query
             execution_results: Results from tool execution
             
         Returns:
             Natural language response to the user
         """
         # Prepare the prompt for the LLM
-        prompt = self._prepare_response_prompt(refined_query, execution_results)
+        prompt = self._prepare_response_prompt(refined_query, sparql_query, execution_results)
         
         # Get response from the LLM
         response = self.proxy.initiate_chat(
             self.agent,
             message=prompt
         )
-        
-        # Extract the response text
-        response_text = response.get("content", "").strip()
-        
+        response_text = response.summary.strip()
         # If response is empty, provide a fallback
         if not response_text:
             response_text = "I'm sorry, I couldn't generate a proper response based on the information available."
-        
         return response_text
     
     def _prepare_response_prompt(
         self, 
-        refined_query: str, 
+        refined_query: str,
+        sparql_query: str,
         execution_results: Dict[str, Any]
     ) -> str:
         """
@@ -98,6 +97,8 @@ You will be provided with the user's query and the raw results from blockchain A
 Your task is to transform these technical results into a helpful, clear response.
 
 User Query: {refined_query}
+
+CUrrent SPARQL Query: {sparql_query}
 
 Execution Results:
 {results_text}
@@ -135,5 +136,4 @@ Since there were errors in the execution:
 Your response should be complete and self-contained, without references to "the results" or "the data."
 Focus on providing value to the user by directly answering their question.
 """
-        
         return prompt

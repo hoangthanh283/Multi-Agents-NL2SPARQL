@@ -9,35 +9,31 @@ from qdrant_client.http.models import (Distance, FieldCondition, Filter,
                                        MatchValue)
 from sentence_transformers import SentenceTransformer
 
-logger = logging.getLogger(__name__)
+from utils.logging_utils import setup_logging
+
+logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class QdrantClient:
     """
     Client for Qdrant vector database operations.
     Handles vector search for SPARQL templates, examples, etc.
     """
-    
-    def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, url: Optional[str] = None):
         """
         Initialize the Qdrant client.
         
         Args:
             url: URL of the Qdrant server, defaults to env var or localhost
-            api_key: API key for authentication, defaults to env var
         """
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
-        self.api_key = api_key or os.getenv("QDRANT_API_KEY")
         self.default_model = SentenceTransformer("all-MiniLM-L6-v2")
-        
+
         # Initialize the base client
-        self.client = BaseQdrantClient(
-            url=self.url,
-            api_key=self.api_key
-        )
-        
+        self.client = BaseQdrantClient(url=self.url)
+
         # Default vector dimension for embedding models
-        self.default_dim = 768
-    
+        self.default_dim = 384
+
     def create_collection(
         self, 
         collection_name: str, 
@@ -95,7 +91,7 @@ class QdrantClient:
             List of search results
         """
         try:
-            # Generate embedding for the query
+            # Generate embedding for the query.
             if embedding_model:
                 query_vector = embedding_model.embed(query_text)
             else:
@@ -120,7 +116,7 @@ class QdrantClient:
             # Use query_points method from Qdrant API
             search_results = self.client.query_points(
                 collection_name=collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=search_filter,
                 limit=limit,
                 score_threshold=threshold

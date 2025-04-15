@@ -88,7 +88,6 @@ class BiEncoderModel(EmbeddingModel):
         # Return single embedding if input was a single string
         if len(text) == 1:
             return embeddings[0]
-            
         return embeddings
     
     def rerank(self, pairs: List[Tuple[str, str]]) -> List[float]:
@@ -118,7 +117,6 @@ class BiEncoderModel(EmbeddingModel):
         
         # Normalize scores to [0, 1] range
         scores = [(score + 1) / 2 for score in scores]
-        
         return scores
 
 
@@ -259,5 +257,4 @@ class LLMEmbedderModel(BiEncoderModel):
         # Return single embedding if input was a single string
         if len(text) == 1:
             return embeddings[0]
-            
         return embeddings

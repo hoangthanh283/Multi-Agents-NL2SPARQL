@@ -19,126 +19,39 @@ from models.embeddings import BiEncoderModel, CrossEncoderModel
 from models.entity_recognition import GLiNERModel
 from tools.sparql_tools import SPARQLTools
 from tools.template_tools import TemplateTools
+from utils.constants import QDRANT_COLLECTIONS
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
-
-
-# def initialize_databases():
-#     """Initialize vector database, elastic search and ontology store."""
-#     logger.info("Initializing databases...")
-    
-#     # Initialize Qdrant client
-#     qdrant_client = QdrantClient(
-#         url=os.getenv("QDRANT_URL"),
-#         api_key=os.getenv("QDRANT_API_KEY")
-#     )
-    
-#     # Create collections if they don't exist
-#     collections = ["query_patterns", "sparql_examples", "conversation_history", "refinement_examples"]
-#     for collection in collections:
-#         if not qdrant_client.collection_exists(collection):
-#             logger.info(f"Creating Qdrant collection: {collection}")
-#             qdrant_client.create_collection(collection)
-    
-#     # Initialize Elasticsearch client
-#     elastic_client = ElasticClient(
-#         url=os.getenv("ELASTICSEARCH_URL"),
-#         api_key=os.getenv("ELASTICSEARCH_API_KEY")
-#     )
-    
-#     # Initialize required indices
-#     elastic_client.initialize_indices()
-    
-#     # Initialize ontology store
-#     ontology_path = os.getenv("ONTOLOGY_PATH", "data/ontologies/academic_ontology.ttl")
-#     ontology_endpoint = os.getenv("SPARQL_ENDPOINT")
-    
-#     ontology_store = OntologyStore(
-#         local_path=ontology_path,
-#         endpoint_url=ontology_endpoint
-#     )
-    
-#     # Load ontology data
-#     ontology_store.load_ontology()
-    
-#     return qdrant_client, elastic_client, ontology_store
+GRAPHDB_URL = os.getenv("GRAPHDB_URL")
+GRAPHDB_REPO_ID = os.getenv("GRAPHDB_REPOSITORY")
+GRAPHDB_ENDPOINT = os.path.join(GRAPHDB_URL, GRAPHDB_REPO_ID)
 
 
 def initialize_databases():
     """Initialize vector database, elastic search and ontology store."""
     logger.info("Initializing databases...")
-    
-    # Initialize Qdrant client
-    qdrant_client = QdrantClient(
-        url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-        api_key=os.getenv("QDRANT_API_KEY")
-    )
-    
-    # Create collections if they don't exist
-    collections = ["query_patterns", "sparql_examples", "conversation_history", "refinement_examples"]
-    for collection in collections:
+    # Initialize Qdrant client.
+    qdrant_client = QdrantClient(url=os.getenv("QDRANT_URL"))
+    for collection in QDRANT_COLLECTIONS:
         if not qdrant_client.collection_exists(collection):
             logger.info(f"Creating Qdrant collection: {collection}")
             qdrant_client.create_collection(collection)
-    
-    # Initialize Elasticsearch client
-    elastic_client = ElasticClient(
-        url=os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"),
-        api_key=os.getenv("ELASTICSEARCH_API_KEY")
-    )
-    
-    # Initialize required indices
+
+    # Initialize Elasticsearch client.
+    elastic_client = ElasticClient(url=os.getenv("ELASTICSEARCH_URL"))
     elastic_client.initialize_indices()
-    
-    # Check if data/ontologies directory exists, create if not
-    ontology_dir = "data/ontologies"
-    if not os.path.exists(ontology_dir):
-        logger.info(f"Creating directory: {ontology_dir}")
-        os.makedirs(ontology_dir, exist_ok=True)
-    
-    # Define ontology path and check if file exists
-    ontology_path = os.getenv("ONTOLOGY_PATH", "data/ontologies/academic_ontology.ttl")
-    
-    if not os.path.exists(ontology_path):
-        logger.warning(f"Ontology file not found at: {ontology_path}")
-        logger.info("Creating a sample ontology file...")
-        
-        # If we have the sample ontology content, write it to the file
-        with open(ontology_path, "w") as f:
-            f.write("""@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix ex: <http://example.org/> .
 
-# Sample minimal ontology
-ex:Person rdf:type owl:Class ;
-    rdfs:label "Person" .
+    # Initialize ontology store with GraphDB support.
+    ontology_store = OntologyStore(endpoint_url=GRAPHDB_ENDPOINT)
 
-ex:name rdf:type owl:DatatypeProperty ;
-    rdfs:domain ex:Person ;
-    rdfs:range xsd:string ;
-    rdfs:label "name" .
-
-ex:JohnDoe rdf:type ex:Person ;
-    ex:name "John Doe" .
-""")
-    
-    # Initialize ontology store
-    ontology_endpoint = os.getenv("SPARQL_ENDPOINT")
-    ontology_store = OntologyStore(
-        local_path=ontology_path,
-        endpoint_url=ontology_endpoint
-    )
-
-    # Load ontology data with better error handling
+    # Load ontology data.
     load_success = ontology_store.load_ontology()
-    
     if not load_success:
-        logger.error("Failed to load ontology. The system may not function correctly.")
-    else:
-        logger.info(f"Successfully loaded ontology with {len(ontology_store.graph)} triples")
+        logger.error("Failed to load ontology from GraphDB, falling back to local file")
+        ontology_path = os.getenv("ONTOLOGY_PATH", "data/ontologies/academic_ontology.ttl")
+        ontology_store = OntologyStore(local_path=ontology_path)
+        ontology_store.load_ontology()
     return qdrant_client, elastic_client, ontology_store
 
 
@@ -158,9 +71,8 @@ def initialize_models():
     
     # Initialize entity recognition model
     entity_recognition_model = GLiNERModel(
-        model_name_or_path="microsoft/gliner"
+        model_name_or_path="urchade/gliner_small-v1"
     )
-    
     return bi_encoder, cross_encoder, entity_recognition_model
 
 
@@ -173,19 +85,15 @@ def initialize_tools():
     
     # Initialize SPARQL tools
     sparql_tools = SPARQLTools()
-    
     return template_tools, sparql_tools
 
 
-def initialize_agents(qdrant_client, elastic_client, ontology_store, bi_encoder, cross_encoder, entity_recognition_model, template_tools):
+def initialize_agents(qdrant_client, elastic_client, ontology_store, bi_encoder, cross_encoder,
+                      entity_recognition_model, template_tools, sparql_tools):
     """Initialize the master agent and all slave agents."""
     logger.info("Initializing agents...")
-    
-    # Initialize SPARQL endpoint for query execution
-    sparql_endpoint = os.getenv("SPARQL_ENDPOINT")
-    sparql_auth_token = os.getenv("SPARQL_AUTH_TOKEN")
-    
-    # Initialize master agent
+
+    # Initialize master agent.
     master_agent = MasterAgent()
     
     # Initialize slave agents
@@ -199,7 +107,7 @@ def initialize_agents(qdrant_client, elastic_client, ontology_store, bi_encoder,
         ontology_store=ontology_store
     )
     
-    # Initialize ontology mapping agent with correct parameters
+    # Initialize ontology mapping agent with correct parameters.
     ontology_mapping_agent = OntologyMappingAgent(
         ontology_path=ontology_store.local_path,
         ontology_endpoint=ontology_store.endpoint_url,
@@ -218,26 +126,13 @@ def initialize_agents(qdrant_client, elastic_client, ontology_store, bi_encoder,
     )
     
     validation_agent = ValidationAgent()
-    
-    sparql_construction_agent = SPARQLConstructionAgent(
-        templates_dir="templates/sparql"
-    )
-    
+    sparql_construction_agent = SPARQLConstructionAgent(templates_dir="templates/sparql") 
     sparql_validation_agent = SPARQLValidationAgent()
-    
-    query_execution_agent = QueryExecutionAgent(
-        endpoint_url=sparql_endpoint,
-        auth_token=sparql_auth_token
-    )
-    
-    tool_execution_agent = ToolExecutionAgent(
-        endpoint_url=sparql_endpoint,
-        auth_token=sparql_auth_token
-    )
-    
+    query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
+    tool_execution_agent = ToolExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
     response_generation_agent = ResponseGenerationAgent()
-    
-    # Register slave agents with master agent
+
+    # Register slave agents with master agent.
     master_agent.register_slave_agent("query_refinement", query_refinement_agent)
     master_agent.register_slave_agent("entity_recognition", entity_recognition_agent)
     master_agent.register_slave_agent("ontology_mapping", ontology_mapping_agent)
@@ -248,7 +143,9 @@ def initialize_agents(qdrant_client, elastic_client, ontology_store, bi_encoder,
     master_agent.register_slave_agent("sparql_validation", sparql_validation_agent)
     master_agent.register_slave_agent("query_execution", query_execution_agent)
     master_agent.register_slave_agent("tool_execution", tool_execution_agent)
-    master_agent.register_slave_agent("response_generation", response_generation_agent)    
+    master_agent.register_slave_agent("response_generation", response_generation_agent)
+    master_agent.register_slave_agent("sparql_tools", sparql_tools)
+    master_agent.register_slave_agent("elastic_client", elastic_client)
     return master_agent
 
 
@@ -256,14 +153,10 @@ def process_query(master_agent, query, conversation_history=None):
     """Process a natural language query and return SPARQL and results."""
     if conversation_history is None:
         conversation_history = []
-    
-    # Process the query
+
     result = master_agent.process_query(query, conversation_history)
-    
-    # Log the processed steps
     logger.info(f"Processed query: {query}")
     logger.info(f"Generated SPARQL: {result.get('sparql', 'No SPARQL generated')}")
-    
     return result
 
 
@@ -273,31 +166,26 @@ def interactive_session(master_agent):
     
     # Maintain conversation history
     conversation_history = []
-    
-    print("\nWelcome to the Natural Language to SPARQL Converter!")
-    print("Enter your questions about the knowledge graph, or type 'exit' to quit.\n")
-    
+    logger.info("\nWelcome to the Natural Language to SPARQL Converter!")
+    logger.info("Enter your questions about the knowledge graph, or type 'exit' to quit.\n")
     while True:
         # Get user input
         user_query = input("Your question: ")
         
         # Check for exit command
         if user_query.lower() in ['exit', 'quit', 'bye']:
-            print("Goodbye!")
+            logger.info("Goodbye!")
             break
         
         try:
-            # Process the query
             result = process_query(master_agent, user_query, conversation_history)
+            logger.info("\n" + result.get("response", "Sorry, I couldn't process that query."))
             
-            # Display the result to the user
-            print("\n" + result.get("response", "Sorry, I couldn't process that query."))
-            
-            # Show the SPARQL if requested
+            # Show the SPARQL if requested.
             if "show sparql" in user_query.lower() or "show query" in user_query.lower():
                 sparql = result.get("sparql", "No SPARQL query generated.")
-                print("\nSPARQL Query:")
-                print(sparql)
+                logger.info("\nSPARQL Query:")
+                logger.info(sparql)
             
             # Update conversation history
             conversation_history.append({
@@ -311,8 +199,7 @@ def interactive_session(master_agent):
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
-            print(f"Sorry, there was an error processing your query: {str(e)}")
-    
+            logger.info(f"Sorry, there was an error processing your query: {str(e)}")
     logger.info("Interactive session ended.")
 
 
@@ -333,12 +220,10 @@ def main():
         bi_encoder, 
         cross_encoder, 
         entity_recognition_model,
-        template_tools
-    )
-    
-    # Start interactive session
+        template_tools,
+        sparql_tools
+    )  
     interactive_session(master_agent)
-    
     logger.info("NL to SPARQL conversion system terminated.")
 
 

@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional
 from elasticsearch import Elasticsearch
 
 from config.api_config import get_api_config
+from utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class ElasticClient:
     """
@@ -14,25 +15,19 @@ class ElasticClient:
     Handles entity resolution and semantic search for ontology terms.
     """
     
-    def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, url: Optional[str] = None):
         """
         Initialize the Elasticsearch client.
         
         Args:
-            url: URL of the Elasticsearch server, defaults to config or localhost
-            api_key: API key for authentication, defaults to config
+            url: URL of the Elasticsearch server, defaults to config or localhost.
         """
         # Get config
         elasticsearch_config = get_api_config("elasticsearch")
-        
         self.url = url or elasticsearch_config["url"]
-        self.api_key = api_key or elasticsearch_config["api_key"]
-        
+
         # Initialize the client
-        self.client = Elasticsearch(
-            hosts=[self.url],
-            api_key=self.api_key
-        )
+        self.client = Elasticsearch(hosts=[self.url])
         
         # Define index mappings for different entity types
         self.entity_indices = elasticsearch_config["indices"]
@@ -52,7 +47,7 @@ class ElasticClient:
             True if successful, False otherwise
         """
         try:
-            # Create the index with settings and mappings
+            # Create the index with settings and mappings.
             response = self.client.indices.create(
                 index=index_name,
                 body={
@@ -394,7 +389,7 @@ class ElasticClient:
     def initialize_indices(self) -> bool:
         """
         Initialize all required indices with appropriate mappings.
-        
+
         Returns:
             True if all indices were created or already exist
         """
@@ -467,7 +462,7 @@ class ElasticClient:
                 self.entity_indices["LITERAL"]: literal_mapping
             }
             
-            # Create each index if it doesn't exist
+            # Create each index if it doesn't exist.
             success = True
             for index_name, mappings in index_mappings.items():
                 if not self.index_exists(index_name):

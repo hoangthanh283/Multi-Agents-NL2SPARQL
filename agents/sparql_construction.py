@@ -570,9 +570,7 @@ Return only the complete SPARQL query with prefixes.
             self.agent,
             message=prompt
         )
-        
-        # Extract the query from the response
-        response_text = response.get("content", "").strip()
+        response_text = response.summary.strip()
         
         # Extract the SPARQL query (ignore explanation text)
         import re

@@ -13,7 +13,6 @@ SPARQL_CONFIG = {
 # Elasticsearch Configuration
 ELASTICSEARCH_CONFIG = {
     "url": os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"),
-    "api_key": os.getenv("ELASTICSEARCH_API_KEY"),
     "indices": {
         "TOKEN": "ontology_classes",
         "PROPERTY": "ontology_properties",
@@ -26,18 +25,17 @@ ELASTICSEARCH_CONFIG = {
 # Qdrant Configuration
 QDRANT_CONFIG = {
     "url": os.getenv("QDRANT_URL", "http://localhost:6333"),
-    "api_key": os.getenv("QDRANT_API_KEY"),
     "collections": {
         "query_patterns": {
-            "vector_size": 768,
+            "vector_size": 384,
             "distance": "Cosine"
         },
         "sparql_examples": {
-            "vector_size": 768,
+            "vector_size": 384,
             "distance": "Cosine"
         },
         "conversation_history": {
-            "vector_size": 768,
+            "vector_size": 384,
             "distance": "Cosine"
         }
     },

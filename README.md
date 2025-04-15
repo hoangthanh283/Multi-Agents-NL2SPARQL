@@ -189,7 +189,7 @@ Support for various SPARQL query forms:
    export OPENAI_API_KEY=your_openai_api_key
    export QDRANT_URL=your_qdrant_url
    export QDRANT_API_KEY=your_qdrant_api_key
-   export SPARQL_ENDPOINT=your_sparql_endpoint
+   export GRAPHDB_ENDPOINT=your_graphdv_endpoint
    ```
 
 3. Configure ontology access:

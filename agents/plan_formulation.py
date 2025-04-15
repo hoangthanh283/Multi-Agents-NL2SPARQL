@@ -238,9 +238,7 @@ class PlanFormulationAgent:
             self.agent,
             message=prompt
         )
-        
-        # Extract the plan from the response
-        response_text = response.get("content", "").strip()
+        response_text = response.summary.strip()
         
         # Parse the plan JSON
         try:

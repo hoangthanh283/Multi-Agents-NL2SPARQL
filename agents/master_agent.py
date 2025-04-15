@@ -1,12 +1,12 @@
 import json
-import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import autogen
 
 from config.agent_config import get_agent_config
+from utils.logging_utils import setup_logging
 
-logger = logging.getLogger(__name__)
+logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class MasterAgent:
     """
@@ -52,31 +52,43 @@ class MasterAgent:
             Dictionary containing the results of the query processing
         """
         logger.info(f"Processing query: {user_query}")
-        
-        # Initialize result dictionary
-        result = {
-            "original_query": user_query,
-            "conversation_history": conversation_history
-        }
-        
+        result = {"original_query": user_query, "conversation_history": conversation_history}
         try:
             # Step 1: Refine the query
             refined_query = self._refine_query(user_query, conversation_history)
             result["refined_query"] = refined_query
             logger.info(f"Refined query: {refined_query}")
-            
+
             # Step 2: Recognize entities in the query
             entities = self._recognize_entities(refined_query)
+            if hasattr(entities, 'content'):  # Handle ChatResult object
+                entities = {"all_entities": []}  # Fallback if response is invalid
             result["entities"] = entities
             logger.info(f"Recognized {len(entities.get('all_entities', []))} entities")
             
             # Step 3: Map entities to ontology terms
             mapped_entities = self._map_entities(entities, refined_query)
+            if hasattr(mapped_entities, 'content'):  # Handle ChatResult object
+                mapped_entities = {
+                    "classes": [],
+                    "properties": [],
+                    "instances": [],
+                    "literals": [],
+                    "unknown": entities.get("all_entities", [])
+                }
             result["mapped_entities"] = mapped_entities
             logger.info(f"Mapped entities to ontology terms")
             
             # Step 4: Construct SPARQL query
             sparql_query_result = self._construct_sparql(refined_query, mapped_entities)
+            if hasattr(sparql_query_result, 'content'):  # Handle ChatResult object
+                sparql_query_result = {
+                    "sparql": "",
+                    "metadata": {
+                        "query_type": "SELECT",
+                        "entities_used": mapped_entities
+                    }
+                }
             result["sparql"] = sparql_query_result.get("sparql")
             result["query_metadata"] = sparql_query_result.get("metadata", {})
             logger.info(f"Constructed SPARQL query")
@@ -86,6 +98,8 @@ class MasterAgent:
                 sparql_query_result.get("sparql", ""),
                 sparql_query_result.get("metadata", {})
             )
+            if hasattr(validation_result, 'content'):  # Handle ChatResult object
+                validation_result = {"is_valid": False, "feedback": "Validation error occurred"}
             result["validation"] = validation_result
             logger.info(f"Validation result: {'Valid' if validation_result.get('is_valid', False) else 'Invalid'}")
             
@@ -98,6 +112,12 @@ class MasterAgent:
                     validation_result
                 )
                 
+                if hasattr(fixed_query_result, 'content'):  # Handle ChatResult object
+                    fixed_query_result = {
+                        "sparql": "",
+                        "metadata": sparql_query_result.get("metadata", {})
+                    }
+                
                 if fixed_query_result.get("sparql"):
                     result["sparql"] = fixed_query_result.get("sparql")
                     result["query_metadata"] = fixed_query_result.get("metadata", {})
@@ -107,12 +127,16 @@ class MasterAgent:
                         fixed_query_result.get("sparql", ""),
                         fixed_query_result.get("metadata", {})
                     )
+                    if hasattr(validation_result, 'content'):  # Handle ChatResult object
+                        validation_result = {"is_valid": False, "feedback": "Validation error occurred"}
                     result["validation"] = validation_result
                     logger.info(f"Fixed query validation: {'Valid' if validation_result.get('is_valid', False) else 'Invalid'}")
             
             # Step 6: Execute the query if validation passed
             if validation_result.get("is_valid", False):
                 execution_result = self._execute_query(result["sparql"])
+                if hasattr(execution_result, 'content'):  # Handle ChatResult object
+                    execution_result = {"success": False, "error": "Query execution error occurred"}
                 result["execution"] = execution_result
                 logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
                 
@@ -122,6 +146,8 @@ class MasterAgent:
                     result["sparql"],
                     execution_result
                 )
+                if hasattr(response, 'content'):  # Handle ChatResult object
+                    response = str(response.content)
                 result["response"] = response
                 logger.info(f"Generated response")
             else:
@@ -129,12 +155,10 @@ class MasterAgent:
                 error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
                 result["response"] = error_response
                 logger.info(f"Generated error response due to validation failure")
-        
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             result["error"] = str(e)
             result["response"] = f"I'm sorry, but an error occurred while processing your question: {str(e)}"
-        
         return result
     
     def _refine_query(self, raw_query: str, conversation_history: List[Dict]) -> str:
@@ -155,9 +179,8 @@ class MasterAgent:
         """Delegate entity recognition to the entity recognition slave agent."""
         if "entity_recognition" not in self.slave_agents:
             return {"all_entities": []}  # Return empty dict if agent not available
-        
         return self.slave_agents["entity_recognition"].recognize_entities(refined_query)
-    
+
     def _map_entities(self, entities: Dict[str, Any], query_context: str) -> Dict[str, Any]:
         """Delegate entity mapping to the ontology mapping slave agent."""
         if "ontology_mapping" not in self.slave_agents:
@@ -168,9 +191,8 @@ class MasterAgent:
                 "literals": [],
                 "unknown": entities.get("all_entities", [])
             }
-        
         return self.slave_agents["ontology_mapping"].map_entities(entities, query_context)
-    
+
     def _construct_sparql(
         self, 
         refined_query: str,
@@ -190,7 +212,6 @@ class MasterAgent:
             refined_query,
             mapped_entities
         )
-        
         return {
             "sparql": result.get("sparql", ""),
             "metadata": {
@@ -200,7 +221,7 @@ class MasterAgent:
                 "entities_used": result.get("entities_used", mapped_entities)
             }
         }
-    
+
     def _validate_sparql(
         self, 
         sparql_query: str,
@@ -209,12 +230,11 @@ class MasterAgent:
         """Delegate SPARQL validation to the sparql validation slave agent."""
         if "sparql_validation" not in self.slave_agents:
             return {"is_valid": True}  # Assume valid if agent not available
-        
         return self.slave_agents["sparql_validation"].validate_query(
             sparql_query,
             query_metadata
         )
-    
+
     def _fix_sparql(
         self, 
         sparql_query: str,
@@ -237,7 +257,6 @@ class MasterAgent:
             query_metadata.get("entities_used", {}),
             validation_result.get("feedback", "")
         )
-        
         return {
             "sparql": result.get("sparql", ""),
             "metadata": {
