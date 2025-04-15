@@ -142,8 +142,15 @@ class MasterAgent:
         if "query_refinement" not in self.slave_agents:
             return raw_query  # Fallback to raw query if agent not available
         
-        return self.slave_agents["query_refinement"].refine_query(raw_query, conversation_history)
-    
+        try:
+            # Get the refined query from the agent
+            refined_query = self.slave_agents["query_refinement"].refine_query(raw_query, conversation_history)
+            return refined_query
+        except Exception as e:
+            logger.error(f"Error refining query: {e}")
+            # Return original query if refinement fails
+            return raw_query
+
     def _recognize_entities(self, refined_query: str) -> Dict[str, Any]:
         """Delegate entity recognition to the entity recognition slave agent."""
         if "entity_recognition" not in self.slave_agents:

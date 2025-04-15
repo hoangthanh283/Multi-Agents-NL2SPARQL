@@ -1,17 +1,20 @@
+# database/qdrant_client.py
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
 from qdrant_client import QdrantClient as BaseQdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import FieldCondition, Filter, MatchValue
+from qdrant_client.http.models import (Distance, FieldCondition, Filter,
+                                       MatchValue)
+from sentence_transformers import SentenceTransformer
 
-from models.embeddings import EmbeddingModel
-
+logger = logging.getLogger(__name__)
 
 class QdrantClient:
     """
     Client for Qdrant vector database operations.
-    Handles vector search for tool selection, example retrieval, etc.
+    Handles vector search for SPARQL templates, examples, etc.
     """
     
     def __init__(self, url: Optional[str] = None, api_key: Optional[str] = None):
@@ -24,6 +27,7 @@ class QdrantClient:
         """
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
         self.api_key = api_key or os.getenv("QDRANT_API_KEY")
+        self.default_model = SentenceTransformer("all-MiniLM-L6-v2")
         
         # Initialize the base client
         self.client = BaseQdrantClient(
@@ -59,83 +63,32 @@ class QdrantClient:
                 collection_name=collection_name,
                 vectors_config=models.VectorParams(
                     size=vector_dim,
-                    distance=models.Distance.COSINE
+                    distance=Distance.COSINE
                 )
             )
             return True
         except Exception as e:
-            print(f"Error creating collection: {e}")
+            logger.error(f"Error creating collection: {e}")
             return False
     
-    def upsert_points(
-        self, 
-        collection_name: str, 
-        points: List[Dict[str, Any]], 
-        embedding_model: EmbeddingModel
-    ) -> bool:
-        """
-        Insert or update points in a collection.
-        
-        Args:
-            collection_name: Name of the collection
-            points: List of points with IDs and payloads
-            embedding_model: Model to generate embeddings
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            # Prepare point data
-            point_data = []
-            for point in points:
-                point_id = point.get("id")
-                payload = point.get("payload", {})
-                text = point.get("text", "")
-                
-                # Generate embedding if text is provided
-                if text:
-                    vector = embedding_model.embed(text)
-                else:
-                    # Skip if no text to embed
-                    continue
-                    
-                # Add the point to batch
-                point_data.append(
-                    models.PointStruct(
-                        id=point_id,
-                        vector=vector,
-                        payload=payload
-                    )
-                )
-                
-            # Upsert the points in batch
-            self.client.upsert(
-                collection_name=collection_name,
-                points=point_data
-            )
-            return True
-        except Exception as e:
-            print(f"Error upserting points: {e}")
-            return False
-    
-    def search_tools(
+    def search(
         self, 
         collection_name: str, 
         query_text: str, 
-        embedding_model: EmbeddingModel, 
-        threshold: float = 0.7, 
-        limit: int = 5, 
+        embedding_model=None, 
+        limit: int = 5,
+        threshold: float = 0.7,
         filter_by: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """
-        Search for relevant tools using vector similarity.
+        Search for similar vectors in the collection using query_points API.
         
         Args:
             collection_name: Name of the collection
             query_text: Text query to search for
             embedding_model: Model to generate embedding
-            threshold: Similarity threshold
             limit: Maximum number of results
+            threshold: Similarity threshold
             filter_by: Optional filter conditions
             
         Returns:
@@ -143,9 +96,13 @@ class QdrantClient:
         """
         try:
             # Generate embedding for the query
-            query_vector = embedding_model.embed(query_text)
+            if embedding_model:
+                query_vector = embedding_model.embed(query_text)
+            else:
+                # Fallback to a default embedding if no model provided.
+                query_vector = self.default_model.encode(query_text).tolist()
             
-            # Prepare filter if provided
+            # Prepare search filter if provided
             search_filter = None
             if filter_by:
                 filter_conditions = []
@@ -159,57 +116,79 @@ class QdrantClient:
                 search_filter = Filter(
                     must=filter_conditions
                 )
-                
-            # Search the collection
-            search_results = self.client.search(
+            
+            # Use query_points method from Qdrant API
+            search_results = self.client.query_points(
                 collection_name=collection_name,
                 query_vector=query_vector,
+                query_filter=search_filter,
                 limit=limit,
-                score_threshold=threshold,
-                filter=search_filter
+                score_threshold=threshold
             )
             
-            return search_results
+            # Create a simplified result format that mimics the previous implementation
+            simplified_results = []
+            for point in search_results.points:
+                simplified_results.append({
+                    "id": point.id,
+                    "payload": point.payload,
+                    "score": point.score
+                })
+            return simplified_results
         except Exception as e:
-            print(f"Error searching tools: {e}")
+            logger.error(f"Error searching in collection: {e}")
             return []
     
-    def search_examples(
+    def upsert_points(
         self, 
         collection_name: str, 
-        query_text: str, 
-        limit: int = 3
-    ) -> List[Any]:
+        points: List[Dict[str, Any]]
+    ) -> bool:
         """
-        Search for similar examples using vector similarity.
-        This is a simplified version that assumes embeddings are pre-computed.
+        Insert or update points in a collection.
         
         Args:
             collection_name: Name of the collection
-            query_text: Text query to search for
-            limit: Maximum number of results
+            points: List of points with IDs, vectors, and payloads
             
         Returns:
-            List of search results
+            True if successful, False otherwise
         """
         try:
-            # For simplicity, we assume there's a default embedding model
-            # In a real implementation, you would initialize the model properly
-            from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer('all-MiniLM-L6-v2')
-            query_vector = model.encode(query_text).tolist()
-            
-            # Search the collection
-            search_results = self.client.search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                limit=limit
-            )
-            
-            return search_results
+            # Prepare point data
+            point_data = []
+            for point in points:
+                point_id = point.get("id")
+                payload = point.get("payload", {})
+                vector = point.get("vector", [])
+                
+                # Skip if no vector
+                if not vector:
+                    logger.warning(f"Skipping point {point_id} - no vector provided")
+                    continue
+                    
+                # Add the point to batch
+                point_data.append(
+                    models.PointStruct(
+                        id=point_id,
+                        vector=vector,
+                        payload=payload
+                    )
+                )
+                
+            # Upsert the points in batch
+            if point_data:
+                self.client.upsert(
+                    collection_name=collection_name,
+                    points=point_data
+                )
+                return True
+            else:
+                logger.warning("No valid points to upsert")
+                return False
         except Exception as e:
-            print(f"Error searching examples: {e}")
-            return []
+            logger.error(f"Error upserting points: {e}")
+            return False
     
     def delete_points(self, collection_name: str, point_ids: List[str]) -> bool:
         """
@@ -225,11 +204,13 @@ class QdrantClient:
         try:
             self.client.delete(
                 collection_name=collection_name,
-                points_selector=point_ids
+                points_selector=models.PointIdsList(
+                    points=point_ids
+                )
             )
             return True
         except Exception as e:
-            print(f"Error deleting points: {e}")
+            logger.error(f"Error deleting points: {e}")
             return False
     
     def collection_exists(self, collection_name: str) -> bool:
@@ -249,5 +230,5 @@ class QdrantClient:
                     return True
             return False
         except Exception as e:
-            print(f"Error checking collection: {e}")
+            logger.error(f"Error checking collection: {e}")
             return False

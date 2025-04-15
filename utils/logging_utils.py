@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import List, Optional
 
 # Default log levels
 DEFAULT_CONSOLE_LEVEL = logging.INFO
@@ -11,24 +11,24 @@ DEFAULT_FILE_LEVEL = logging.DEBUG
 
 # ANSI color codes for colored console output
 COLORS = {
-    'RESET': '\033[0m',
-    'RED': '\033[31m',
-    'GREEN': '\033[32m',
-    'YELLOW': '\033[33m',
-    'BLUE': '\033[34m',
-    'MAGENTA': '\033[35m',
-    'CYAN': '\033[36m',
-    'WHITE': '\033[37m',
-    'BOLD': '\033[1m'
+    "RESET": "\033[0m",
+    "RED": "\033[31m",
+    "GREEN": "\033[32m",
+    "YELLOW": "\033[33m",
+    "BLUE": "\033[34m",
+    "MAGENTA": "\033[35m",
+    "CYAN": "\033[36m",
+    "WHITE": "\033[37m",
+    "BOLD": "\033[1m"
 }
 
 # Map log levels to colors
 LEVEL_COLORS = {
-    logging.DEBUG: COLORS['BLUE'],
-    logging.INFO: COLORS['GREEN'],
-    logging.WARNING: COLORS['YELLOW'],
-    logging.ERROR: COLORS['RED'],
-    logging.CRITICAL: COLORS['BOLD'] + COLORS['RED']
+    logging.DEBUG: COLORS["BLUE"],
+    logging.INFO: COLORS["GREEN"],
+    logging.WARNING: COLORS["YELLOW"],
+    logging.ERROR: COLORS["RED"],
+    logging.CRITICAL: COLORS["BOLD"] + COLORS["RED"]
 }
 
 class ColoredFormatter(logging.Formatter):
@@ -46,19 +46,19 @@ class JSONFormatter(logging.Formatter):
     
     def format(self, record):
         log_data = {
-            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-            'level': record.levelname,
-            'name': record.name,
-            'message': record.getMessage()
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage()
         }
         
         # Add exception info if available
         if record.exc_info:
-            log_data['exception'] = self.formatException(record.exc_info)
+            log_data["exception"] = self.formatException(record.exc_info)
         
         # Add extra fields
         for key, value in record.__dict__.items():
-            if key not in log_data and not key.startswith('_') and key != 'args':
+            if key not in log_data and not key.startswith("_") and key != "args":
                 log_data[key] = value
         
         return json.dumps(log_data)
@@ -85,7 +85,7 @@ def setup_logging(
     Returns:
         Configured logger instance
     """
-    # Create logs directory if it doesn't exist
+    # Create logs directory if it doesn"t exist
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     
@@ -102,10 +102,10 @@ def setup_logging(
     console_handler.setLevel(console_level)
     
     if enable_colors:
-        console_format = '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+        console_format = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
         console_formatter = ColoredFormatter(console_format)
     else:
-        console_format = '%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+        console_format = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
         console_formatter = logging.Formatter(console_format)
         
     console_handler.setFormatter(console_formatter)
@@ -121,7 +121,7 @@ def setup_logging(
     if enable_json:
         file_formatter = JSONFormatter()
     else:
-        file_format = '%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s'
+        file_format = "%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s"
         file_formatter = logging.Formatter(file_format)
         
     file_handler.setFormatter(file_formatter)

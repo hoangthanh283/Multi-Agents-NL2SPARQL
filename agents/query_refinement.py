@@ -63,33 +63,46 @@ class QueryRefinementAgent:
         Returns:
             Refined query as a standalone question
         """
-        # Retrieve relevant conversation history
-        relevant_history = self._get_relevant_history(raw_query, conversation_history)
-        
-        # Retrieve similar refinement examples
-        similar_examples = self._get_similar_examples(raw_query)
-        
-        # Prepare the prompt for the LLM
-        prompt = self._prepare_refinement_prompt(raw_query, relevant_history, similar_examples)
-        
-        # Get refined query from the LLM
-        response = self.proxy.initiate_chat(
-            self.agent,
-            message=prompt
-        )
-        
-        # Extract the refined query from the response
-        refined_query = response.get("content", "").strip()
-        
-        # Clean up the response if needed (remove quotes, explanation text, etc.)
-        if refined_query.startswith('"') and refined_query.endswith('"'):
-            refined_query = refined_query[1:-1]
-        
-        # If the refinement failed, fall back to the original query
-        if not refined_query:
-            return raw_query
+        try:
+            # Retrieve relevant conversation history
+            relevant_history = self._get_relevant_history(raw_query, conversation_history)
             
-        return refined_query
+            # Retrieve similar refinement examples
+            similar_examples = self._get_similar_examples(raw_query)
+            
+            # Prepare the prompt for the LLM
+            prompt = self._prepare_refinement_prompt(raw_query, relevant_history, similar_examples)
+            
+            # Get refined query from the LLM
+            response = self.proxy.initiate_chat(
+                self.agent,
+                message=prompt
+            )
+            
+            # Extract the refined query from the response
+            # Handle different response types correctly
+            if hasattr(response, 'content'):
+                # It's likely an Autogen ChatResult object
+                refined_query = response.content.strip()
+            elif isinstance(response, dict) and 'content' in response:
+                # It's a dictionary with content key
+                refined_query = response['content'].strip()
+            else:
+                # Try to convert to string as a fallback
+                refined_query = str(response).strip()
+            
+            # Clean up the response if needed (remove quotes, explanation text, etc.)
+            if refined_query.startswith('"') and refined_query.endswith('"'):
+                refined_query = refined_query[1:-1]
+            
+            # If the refinement failed, fall back to the original query
+            if not refined_query:
+                return raw_query
+            return refined_query
+        except Exception as e:
+            logger.error(f"Error in query refinement: {e}")
+            # Return the original query in case of any error
+            return raw_query
     
     def _get_relevant_history(self, query: str, conversation_history: List[Dict], limit: int = 5) -> List[Dict]:
         """

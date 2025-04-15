@@ -445,7 +445,7 @@ class ElasticClient:
                     "types": {"type": "keyword"},
                     "properties": {
                         "type": "object",
-                        "enabled": true
+                        "enabled": True
                     }
                 }
             }

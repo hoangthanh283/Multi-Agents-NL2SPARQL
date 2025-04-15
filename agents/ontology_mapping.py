@@ -7,6 +7,9 @@ from rdflib import Graph, Literal, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 from sentence_transformers import SentenceTransformer
 
+from config.agent_config import OPEN_API_KEY
+from database.ontology_store import OntologyStore
+
 
 class OntologyMappingAgent:
     """
@@ -18,7 +21,8 @@ class OntologyMappingAgent:
         self, 
         ontology_path: Optional[str] = None,
         ontology_endpoint: Optional[str] = None,
-        embedding_model_name: str = "all-MiniLM-L6-v2"
+        embedding_model_name: str = "all-MiniLM-L6-v2",
+        ontology_store: Optional[OntologyStore] = None  # Add this parameter
     ):
         """
         Initialize the ontology mapping agent.
@@ -27,15 +31,33 @@ class OntologyMappingAgent:
             ontology_path: Local path to ontology file (RDF/OWL/TTL)
             ontology_endpoint: SPARQL endpoint for remote ontology access
             embedding_model_name: Name of the embedding model for semantic matching
+            ontology_store: Optional pre-initialized ontology store object
         """
         # Initialize ontology graph
         self.graph = Graph()
         
-        # Load ontology
-        if ontology_path:
-            self._load_local_ontology(ontology_path)
-        elif ontology_endpoint:
-            self._load_remote_ontology(ontology_endpoint)
+        # Use provided ontology_store if available, otherwise create new one
+        if ontology_store:
+            self.graph = ontology_store.graph
+            self.local_path = ontology_store.local_path
+            self.endpoint_url = ontology_store.endpoint_url
+            # Reuse the ontology store's cached data
+            self.class_hierarchy = ontology_store.classes
+            self.property_domains_ranges = ontology_store.properties
+            self.instances = ontology_store.instances
+        else:
+            # Load ontology as before
+            self.local_path = ontology_path
+            self.endpoint_url = ontology_endpoint
+            
+            if ontology_path:
+                self._load_local_ontology(ontology_path)
+            elif ontology_endpoint:
+                self._load_remote_ontology(ontology_endpoint)
+                
+            # Build indices
+            self.class_hierarchy = self._build_class_hierarchy()
+            self.property_domains_ranges = self._build_property_domains_ranges()
         
         # Initialize embedding model for semantic matching
         self.embedding_model = SentenceTransformer(embedding_model_name)
@@ -54,7 +76,7 @@ class OntologyMappingAgent:
 Your task is to map natural language terms to formal ontology terms.
 Analyze the context, term descriptions, and ontology structure to find the best matches.""",
             "llm_config": {
-                "config_list": [{"model": "gpt-3.5-turbo", "api_key": "YOUR_API_KEY"}],
+                "config_list": [{"model": "gpt-4o-mini", "api_key": OPEN_API_KEY}],
                 "temperature": 0.1
             }
         }
