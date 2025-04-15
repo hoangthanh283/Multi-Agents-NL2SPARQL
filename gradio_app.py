@@ -9,13 +9,10 @@ from agents.query_execution import QueryExecutionAgent
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
-
-# Set up GraphDB URL info as before.
 GRAPHDB_URL = os.getenv("GRAPHDB_URL")
 GRAPHDB_REPO_ID = os.getenv("GRAPHDB_REPOSITORY")
 GRAPHDB_ENDPOINT = os.path.join(GRAPHDB_URL, GRAPHDB_REPO_ID)
 
-# --- Initialize all components like before ---
 qdrant_client, elastic_client, ontology_store = initialize_databases()
 bi_encoder, cross_encoder, entity_recognition_model = initialize_models()
 template_tools, sparql_tools = initialize_tools()
@@ -32,7 +29,6 @@ master_agent = initialize_agents(
 # Initialize the query execution agent to run SPARQL against GraphDB.
 query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
 
-# --- Define processing functions for the Gradio UI ---
 
 def process_gradio_query(user_query, conversation_history):
     """
@@ -55,8 +51,8 @@ def process_gradio_query(user_query, conversation_history):
     # Update conversation history with the interaction.
     conversation_history.append({"role": "user", "content": user_query})
     conversation_history.append({"role": "assistant", "content": final_response})
-    
     return intermediate_reasoning, final_response, generated_sparql, conversation_history
+
 
 def execute_sparql_query(sparql_query):
     """
@@ -70,43 +66,41 @@ def execute_sparql_query(sparql_query):
     except Exception as e:
         logger.error(f"Error executing SPARQL: {e}")
         return f"Error executing SPARQL: {e}"
-
-# --- Construct the Gradio Blocks interface ---
-with gr.Blocks() as demo:
-    gr.Markdown("# Natural Language to SPARQL Interactive UI")
     
-    with gr.Tab("Query Chat"):
-        with gr.Row():
-            user_input = gr.Textbox(label="Enter your question", placeholder="Type your query here...", lines=1)
-            submit_button = gr.Button("Submit")
-        with gr.Row():
-            reasoning_output = gr.Textbox(label="Intermediate Reasoning", lines=5)
-        with gr.Row():
-            final_answer_output = gr.Textbox(label="Final Answer", lines=3)
-        with gr.Row():
-            sparql_output = gr.Textbox(label="Generated SPARQL Query", lines=5)
-        
-        # Use a Gradio State to maintain the conversation history.
-        conversation_state = gr.State([])
 
-        submit_button.click(
-            process_gradio_query,
-            inputs=[user_input, conversation_state],
-            outputs=[reasoning_output, final_answer_output, sparql_output, conversation_state]
-        )
-    
-    with gr.Tab("Execute SPARQL"):
-        gr.Markdown("Enter a SPARQL query (this can be the generated query or your own) to execute on GraphDB.")
-        with gr.Row():
-            sparql_input = gr.Textbox(label="SPARQL Query", placeholder="Type your SPARQL query here...", lines=5)
-            execute_button = gr.Button("Execute Query")
-        sparql_result = gr.Textbox(label="Query Result", lines=5)
-        execute_button.click(
-            execute_sparql_query,
-            inputs=[sparql_input],
-            outputs=[sparql_result]
-        )
-
-# Launch the Gradio demo.
 if __name__ == "__main__":
+    with gr.Blocks() as demo:
+        gr.Markdown("# NL Query to SPARQL")
+        
+        with gr.Tab("Query Chat"):
+            with gr.Row():
+                user_input = gr.Textbox(label="Enter your question", placeholder="Type your query here...", lines=1)
+                submit_button = gr.Button("Submit")
+            with gr.Row():
+                reasoning_output = gr.Textbox(label="Intermediate Reasoning", lines=5)
+            with gr.Row():
+                final_answer_output = gr.Textbox(label="Final Answer", lines=3)
+            with gr.Row():
+                sparql_output = gr.Textbox(label="Generated SPARQL Query", lines=5)
+            
+            # Use a Gradio State to maintain the conversation history.
+            conversation_state = gr.State([])
+            submit_button.click(
+                process_gradio_query,
+                inputs=[user_input, conversation_state],
+                outputs=[reasoning_output, final_answer_output, sparql_output, conversation_state]
+            )
+        
+        with gr.Tab("Execute SPARQL"):
+            gr.Markdown("Enter a SPARQL query (this can be the generated query or your own) to execute on GraphDB.")
+            with gr.Row():
+                sparql_input = gr.Textbox(label="SPARQL Query", placeholder="Type your SPARQL query here...", lines=5)
+                execute_button = gr.Button("Execute Query")
+            sparql_result = gr.Textbox(label="Query Result", lines=5)
+            execute_button.click(
+                execute_sparql_query,
+                inputs=[sparql_input],
+                outputs=[sparql_result]
+            )
+
     demo.launch()
