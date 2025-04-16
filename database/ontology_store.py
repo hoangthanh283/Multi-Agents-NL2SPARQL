@@ -1,12 +1,12 @@
 import logging
 import os
 import re
-import pandas as pd
 from typing import Any, Dict, List, Optional, Tuple
 
-from SPARQLWrapper import SPARQLWrapper, JSON
+import pandas as pd
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
+from SPARQLWrapper import JSON, SPARQLWrapper
 
 logger = logging.getLogger(__name__)
 
