@@ -1,16 +1,14 @@
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
-
 import pandas as pd
+from typing import Any, Dict, List, Optional, Tuple
+
+from SPARQLWrapper import SPARQLWrapper, JSON
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
-from SPARQLWrapper import JSON, SPARQLWrapper
 
-from utils.logging_utils import setup_logging
-
-logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
+logger = logging.getLogger(__name__)
 
 class OntologyStore:
     """
@@ -34,7 +32,7 @@ class OntologyStore:
         """
         self.local_path = local_path
         # Default to the GraphDB container endpoint if no endpoint is provided.
-        self.endpoint_url = endpoint_url
+        self.endpoint_url = endpoint_url if endpoint_url else "http://localhost:7200/repositories/CHeVIE"
         
         # Initialize SPARQL wrapper for GraphDB
         self.sparql = SPARQLWrapper(self.endpoint_url)
@@ -86,6 +84,7 @@ class OntologyStore:
             test_query = "ASK { ?s ?p ?o }"
             self.sparql.setQuery(test_query)
             results = self.sparql.query().convert()
+            
             if results.get('boolean', False):
                 logger.info("Successfully connected to GraphDB")
                 success = True
@@ -822,37 +821,102 @@ class OntologyStore:
     
     def get_ontology_summary(self) -> Dict[str, Any]:
         """Get a summary of the ontology."""
-        # Get top-level classes (those without superclasses or only owl:Thing as superclass)
-        top_classes = []
-        for uri, info in self.classes.items():
-            if not info["superclasses"] or all(sc.endswith("#Thing") for sc in info["superclasses"]):
-                top_classes.append(info)
+        # Query for top-level classes (those without a superclass or only owl:Thing as superclass)
+        top_classes_query = """
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
         
-        # Get top-level properties grouped by type
+        SELECT ?class ?label ?comment (COUNT(?subClass) AS ?subClassCount)
+        WHERE {
+            ?class a owl:Class .
+            OPTIONAL { ?class rdfs:label ?label }
+            OPTIONAL { ?class rdfs:comment ?comment }
+            
+            # Count subclasses for each class
+            OPTIONAL { ?subClass rdfs:subClassOf ?class }
+            
+            # Only get classes that have no superclass or only Thing as superclass
+            FILTER NOT EXISTS { 
+                ?class rdfs:subClassOf ?superClass . 
+                FILTER(?superClass != owl:Thing && ?superClass != rdfs:Resource)
+            }
+        }
+        GROUP BY ?class ?label ?comment
+        ORDER BY DESC(?subClassCount)
+        LIMIT 10
+        """
+        
+        top_classes_df = self._query_graphdb(top_classes_query)
+        
+        # Query for property types
+        property_query = """
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        
+        SELECT ?property ?type ?label ?comment
+        WHERE {
+            {
+                ?property a owl:ObjectProperty .
+                BIND("owl:ObjectProperty" AS ?type)
+            } UNION {
+                ?property a owl:DatatypeProperty .
+                BIND("owl:DatatypeProperty" AS ?type)
+            } UNION {
+                ?property a rdf:Property .
+                FILTER NOT EXISTS { ?property a owl:ObjectProperty }
+                FILTER NOT EXISTS { ?property a owl:DatatypeProperty }
+                BIND("rdf:Property" AS ?type)
+            }
+            OPTIONAL { ?property rdfs:label ?label }
+            OPTIONAL { ?property rdfs:comment ?comment }
+        }
+        LIMIT 30
+        """
+        
+        property_df = self._query_graphdb(property_query)
+        
+        # Format results
+        top_classes = []
+        for _, row in top_classes_df.iterrows():
+            top_classes.append({
+                "uri": row["class"],
+                "label": row.get("label", self._extract_name_from_uri(row["class"])),
+                "comment": row.get("comment"),
+                "subclasses": int(row["subClassCount"]) if "subClassCount" in row else 0
+            })
+        
         obj_properties = []
         data_properties = []
         other_properties = []
         
-        for uri, info in self.properties.items():
-            if info["type"] == "owl:ObjectProperty":
-                obj_properties.append(info)
-            elif info["type"] == "owl:DatatypeProperty":
-                data_properties.append(info)
+        for _, row in property_df.iterrows():
+            prop_info = {
+                "uri": row["property"],
+                "label": row.get("label", self._extract_name_from_uri(row["property"])),
+                "comment": row.get("comment")
+            }
+            
+            prop_type = row.get("type", "rdf:Property")
+            if prop_type == "owl:ObjectProperty":
+                obj_properties.append(prop_info)
+            elif prop_type == "owl:DatatypeProperty":
+                data_properties.append(prop_info)
             else:
-                other_properties.append(info)
+                other_properties.append(prop_info)
         
-        # Limit to top 10 of each for the summary
         return {
             "stats": self.stats,
-            "top_classes": sorted(top_classes, key=lambda x: len(x["subclasses"]), reverse=True)[:10],
-            "object_properties": sorted(obj_properties, key=lambda x: x["label"])[:10],
-            "datatype_properties": sorted(data_properties, key=lambda x: x["label"])[:10],
-            "other_properties": sorted(other_properties, key=lambda x: x["label"])[:10]
+            "top_classes": top_classes,
+            "object_properties": obj_properties[:10],
+            "datatype_properties": data_properties[:10],
+            "other_properties": other_properties[:10]
         }
     
     def execute_sparql(self, query: str) -> Dict[str, Any]:
         """
-        Execute a SPARQL query against the local graph or GraphDB endpoint.
+        Execute a SPARQL query against the GraphDB endpoint.
         
         Args:
             query: SPARQL query string
@@ -860,11 +924,6 @@ class OntologyStore:
         Returns:
             Query results
         """
-        # If using GraphDB, execute against the endpoint
-        if self.is_graphdb and self.sparql:
-            return self._execute_sparql_graphdb(query)
-        
-        # Otherwise execute against the local graph
         try:
             # Add prefixes if not already in the query
             if not re.search(r'PREFIX\s+', query, re.IGNORECASE):
@@ -873,103 +932,66 @@ class OntologyStore:
                     prefix_str += f"PREFIX {prefix}: <{uri}>\n"
                 query = prefix_str + query
             
-            # Execute the query
-            results = self.graph.query(query)
+            # Determine query type
+            query_upper = query.strip().upper()
             
-            # Format results based on query type
-            if query.strip().upper().startswith("ASK"):
+            if query_upper.startswith("ASK"):
+                # ASK query
+                self.sparql.setQuery(query)
+                results = self.sparql.query().convert()
+                
                 return {
                     "success": True,
                     "type": "boolean",
-                    "value": bool(results)
+                    "value": results.get("boolean", False)
                 }
-            elif query.strip().upper().startswith("SELECT"):
-                # Format SELECT results
+            
+            elif query_upper.startswith("SELECT"):
+                # SELECT query - convert to standard format
+                df = self._query_graphdb(query)
+                
+                # Convert DataFrame to expected format
                 bindings = []
-                for row in results:
+                for _, row in df.iterrows():
                     binding = {}
-                    for var, value in zip(results.vars, row):
-                        if isinstance(value, URIRef):
-                            binding[str(var)] = {
-                                "type": "uri",
-                                "value": str(value),
-                                "label": self._get_label(value)
-                            }
-                        elif isinstance(value, Literal):
-                            binding[str(var)] = {
-                                "type": "literal",
-                                "value": str(value),
-                                "datatype": str(value.datatype) if value.datatype else None
-                            }
-                        elif isinstance(value, BNode):
-                            binding[str(var)] = {
-                                "type": "bnode",
-                                "value": str(value)
-                            }
-                        else:
-                            binding[str(var)] = {
-                                "type": "unknown",
-                                "value": str(value)
-                            }
+                    for col in df.columns:
+                        if not pd.isna(row[col]):
+                            # Infer type
+                            value = row[col]
+                            if isinstance(value, str) and (value.startswith('http://') or value.startswith('https://')):
+                                binding[col] = {
+                                    "type": "uri",
+                                    "value": value
+                                }
+                            else:
+                                binding[col] = {
+                                    "type": "literal",
+                                    "value": str(value)
+                                }
                     bindings.append(binding)
                 
                 return {
                     "success": True,
                     "type": "bindings",
                     "head": {
-                        "vars": [str(var) for var in results.vars]
+                        "vars": list(df.columns)
                     },
                     "results": {
                         "bindings": bindings
                     }
                 }
-            elif query.strip().upper().startswith(("CONSTRUCT", "DESCRIBE")):
-                # Format CONSTRUCT/DESCRIBE results (triples)
-                triples = []
-                for s, p, o in results:
-                    triple = {
-                        "subject": {
-                            "type": "uri" if isinstance(s, URIRef) else "bnode",
-                            "value": str(s),
-                            "label": self._get_label(s) if isinstance(s, URIRef) else None
-                        },
-                        "predicate": {
-                            "type": "uri",
-                            "value": str(p),
-                            "label": self._get_label(p)
-                        }
-                    }
-                    
-                    if isinstance(o, URIRef):
-                        triple["object"] = {
-                            "type": "uri",
-                            "value": str(o),
-                            "label": self._get_label(o)
-                        }
-                    elif isinstance(o, Literal):
-                        triple["object"] = {
-                            "type": "literal",
-                            "value": str(o),
-                            "datatype": str(o.datatype) if o.datatype else None
-                        }
-                    elif isinstance(o, BNode):
-                        triple["object"] = {
-                            "type": "bnode",
-                            "value": str(o)
-                        }
-                    else:
-                        triple["object"] = {
-                            "type": "unknown",
-                            "value": str(o)
-                        }
-                    
-                    triples.append(triple)
+            
+            elif query_upper.startswith("CONSTRUCT") or query_upper.startswith("DESCRIBE"):
+                # For CONSTRUCT and DESCRIBE, just pass-through the results
+                self.sparql.setQuery(query)
+                results = self.sparql.query().convert()
                 
                 return {
                     "success": True,
-                    "type": "triples",
-                    "triples": triples
+                    "type": "graph",
+                    "results": results
                 }
+            
             else:
                 return {
                     "success": False,
@@ -978,129 +1000,6 @@ class OntologyStore:
                 
         except Exception as e:
             logger.error(f"Error executing SPARQL query: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
-    def _execute_sparql_graphdb(self, query: str) -> Dict[str, Any]:
-        """
-        Execute a SPARQL query against GraphDB.
-        
-        Args:
-            query: SPARQL query string
-            
-        Returns:
-            Query results
-        """
-        try:
-            # Add prefixes if not already in the query
-            if not re.search(r'PREFIX\s+', query, re.IGNORECASE):
-                prefix_str = ""
-                for prefix, uri in self.prefixes.items():
-                    prefix_str += f"PREFIX {prefix}: <{uri}>\n"
-                query = prefix_str + query
-            
-            # Set query and execute
-            self.sparql.setQuery(query)
-            
-            # Determine query type for appropriate result format
-            query_type = None
-            if re.search(r'^\s*(?:PREFIX\s+[^\n]+\s+)*\s*SELECT\s+', query, re.IGNORECASE | re.DOTALL):
-                query_type = "SELECT"
-                self.sparql.setReturnFormat(JSON)
-            elif re.search(r'^\s*(?:PREFIX\s+[^\n]+\s+)*\s*ASK\s+', query, re.IGNORECASE | re.DOTALL):
-                query_type = "ASK"
-                self.sparql.setReturnFormat(JSON)
-            elif re.search(r'^\s*(?:PREFIX\s+[^\n]+\s+)*\s*CONSTRUCT\s+', query, re.IGNORECASE | re.DOTALL):
-                query_type = "CONSTRUCT"
-                self.sparql.setReturnFormat(RDFXML)
-            elif re.search(r'^\s*(?:PREFIX\s+[^\n]+\s+)*\s*DESCRIBE\s+', query, re.IGNORECASE | re.DOTALL):
-                query_type = "DESCRIBE"
-                self.sparql.setReturnFormat(RDFXML)
-            else:
-                # Default to JSON for unknown query types
-                self.sparql.setReturnFormat(JSON)
-            
-            # Execute the query
-            results = self.sparql.query().convert()
-            
-            # Format results based on query type
-            if query_type == "ASK":
-                return {
-                    "success": True,
-                    "type": "boolean",
-                    "value": results["boolean"] if "boolean" in results else False
-                }
-            elif query_type == "SELECT":
-                return {
-                    "success": True,
-                    "type": "bindings",
-                    "head": results.get("head", {"vars": []}),
-                    "results": {
-                        "bindings": results.get("results", {}).get("bindings", [])
-                    }
-                }
-            elif query_type in ["CONSTRUCT", "DESCRIBE"]:
-                # Convert RDF/XML results to a list of triples
-                graph = Graph()
-                graph.parse(data=results, format="xml")
-                
-                triples = []
-                for s, p, o in graph:
-                    triple = {
-                        "subject": {
-                            "type": "uri" if isinstance(s, URIRef) else "bnode",
-                            "value": str(s),
-                            "label": self._get_label_from_uri(str(s)) if isinstance(s, URIRef) else None
-                        },
-                        "predicate": {
-                            "type": "uri",
-                            "value": str(p),
-                            "label": self._get_label_from_uri(str(p))
-                        }
-                    }
-                    
-                    if isinstance(o, URIRef):
-                        triple["object"] = {
-                            "type": "uri",
-                            "value": str(o),
-                            "label": self._get_label_from_uri(str(o))
-                        }
-                    elif isinstance(o, Literal):
-                        triple["object"] = {
-                            "type": "literal",
-                            "value": str(o),
-                            "datatype": str(o.datatype) if o.datatype else None
-                        }
-                    elif isinstance(o, BNode):
-                        triple["object"] = {
-                            "type": "bnode",
-                            "value": str(o)
-                        }
-                    else:
-                        triple["object"] = {
-                            "type": "unknown",
-                            "value": str(o)
-                        }
-                    
-                    triples.append(triple)
-                
-                return {
-                    "success": True,
-                    "type": "triples",
-                    "triples": triples
-                }
-            else:
-                # Generic handling for other result types
-                return {
-                    "success": True,
-                    "type": "unknown",
-                    "data": results
-                }
-                
-        except Exception as e:
-            logger.error(f"Error executing SPARQL query against GraphDB: {e}")
             return {
                 "success": False,
                 "error": str(e)
