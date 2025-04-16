@@ -67,9 +67,8 @@ class EntityRecognitionAgent:
         
         # Step 5: Enrich with ontology information
         enriched_entities = self._enrich_with_ontology(organized_entities)
-        
         return enriched_entities
-    
+
     def _extract_entities_with_model(self, query: str) -> List[Dict[str, Any]]:
         """
         Extract entities using the entity recognition model.
@@ -86,7 +85,7 @@ class EntityRecognitionAgent:
                 text=query,
                 entity_types=self.entity_types
             )
-            
+
             # Format the extracted entities
             extracted_entities = []
             for entity_pred in entity_predictions:

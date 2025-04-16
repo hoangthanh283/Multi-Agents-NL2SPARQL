@@ -78,7 +78,7 @@ class MasterAgent:
                 }
             result["mapped_entities"] = mapped_entities
             logger.info(f"Mapped entities to ontology terms")
-            
+
             # Step 4: Construct SPARQL query
             sparql_query_result = self._construct_sparql(refined_query, mapped_entities)
             if hasattr(sparql_query_result, 'content'):  # Handle ChatResult object

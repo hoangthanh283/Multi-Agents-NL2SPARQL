@@ -73,61 +73,47 @@ class QueryExecutionAgent:
         Returns:
             Query execution results
         """
-        # Use provided endpoint or default
+        # Use provided endpoint or default.
         endpoint = endpoint_url or self.endpoint_url
-        
         if not endpoint:
             return {
                 "success": False,
                 "error": "No SPARQL endpoint specified"
             }
-        
-        # Determine result format
         format_const = self.format_map.get(result_format.lower(), JSON)
-        
-        # Generate cache key if caching is enabled
+
+        # Generate cache key if caching is enabled.
         cache_key = None
         if use_cache:
             cache_key = f"{endpoint}_{result_format}_{hash(sparql_query)}"
-            
-            # Check cache
             if cache_key in self.result_cache:
                 cache_entry = self.result_cache[cache_key]
-                # Check if cache is still valid (less than 5 minutes old)
+                # Check if cache is still valid (less than 5 minutes old).
                 if time.time() - cache_entry["timestamp"] < 300:
                     logger.info(f"Using cached result for query: {sparql_query[:50]}...")
                     return cache_entry["result"]
-        
+
         try:
-            # Initialize SPARQL wrapper
+            # Initialize SPARQL wrapper.
             sparql = SPARQLWrapper(endpoint)
             sparql.setQuery(sparql_query)
             sparql.setReturnFormat(format_const)
-            
-            # Set timeout
             sparql.setTimeout(self.timeout)
-            
-            # Set default graph if specified
+
+            # Set default graph if specified.
             if self.default_graph:
                 sparql.addDefaultGraph(self.default_graph)
-            
-            # Set authentication if available
+
+            # Set authentication if available.
             if self.auth_token:
                 sparql.addCustomHttpHeader("Authorization", f"Bearer {self.auth_token}")
-            
-            # Execute query
             logger.info(f"Executing SPARQL query: {sparql_query[:50]}...")
             start_time = time.time()
             results = sparql.query()
             execution_time = time.time() - start_time
-            
-            # Process results based on format
             if format_const == JSON:
                 result_data = results.convert()
-                
-                # Format the output
                 formatted_result = self._format_json_results(result_data, sparql_query)
-                
             elif format_const in [XML, RDFXML]:
                 result_data = results.convert()
                 formatted_result = {
@@ -135,7 +121,6 @@ class QueryExecutionAgent:
                     "data": str(result_data),
                     "info": "XML results"
                 }
-                
             elif format_const in [N3, TURTLE]:
                 result_data = results.convert()
                 formatted_result = {
@@ -143,7 +128,6 @@ class QueryExecutionAgent:
                     "data": str(result_data),
                     "info": "RDF results"
                 }
-                
             elif format_const in [CSV, TSV]:
                 result_data = results.convert()
                 formatted_result = {
@@ -151,17 +135,13 @@ class QueryExecutionAgent:
                     "data": str(result_data),
                     "info": f"{format_const} results"
                 }
-                
             else:
-                # Generic handling for other formats
                 result_data = results.convert()
                 formatted_result = {
                     "format": "unknown",
                     "data": str(result_data),
                     "info": "Raw results"
                 }
-            
-            # Add metadata
             result = {
                 "success": True,
                 "execution_time": execution_time,
@@ -170,20 +150,15 @@ class QueryExecutionAgent:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "results": formatted_result
             }
-            
-            # Cache the result if caching is enabled
             if use_cache and cache_key:
                 self.result_cache[cache_key] = {
                     "result": result,
                     "timestamp": time.time()
                 }
-            
             return result
-            
         except Exception as e:
             error_message = f"Error executing SPARQL query: {str(e)}"
             logger.error(error_message)
-            
             return {
                 "success": False,
                 "error": error_message,
