@@ -1,0 +1,7 @@
+.env
+.ipynb*
+__pycache__/
+.cache/
+*/.cache/
+logs/
+*/logs/

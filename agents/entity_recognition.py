@@ -66,7 +66,11 @@ class EntityRecognitionAgent:
         organized_entities = self._organize_entities(merged_entities)
         
         # Step 5: Enrich with ontology information
-        enriched_entities = self._enrich_with_ontology(organized_entities)
+        if self.ontology_store:
+            enriched_entities = self._enrich_with_ontology(organized_entities) 
+        else:
+            return organized_entities
+        
         return enriched_entities
 
     def _extract_entities_with_model(self, query: str) -> List[Dict[str, Any]]:
