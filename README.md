@@ -141,7 +141,7 @@ Each agent is highly specialized and contributes to a specific part of the query
 
 ## Technology Stack
 
-- **Agent Framework**: Microsoft AutoGen
+- **Agent Framework**: Microsoft AutoGen, Langchain
 - **Vector Database**: Qdrant for vector search of similar queries and patterns
 - **Entity Resolution**: Elasticsearch for fuzzy search and handling misspellings
 - **Triple Store**: RDF store for ontology access (can use GraphDB, Stardog, Apache Jena)
@@ -335,6 +335,7 @@ WHERE {
 ```
 
 ## Extending the System
+
 
 ### Adding New Ontologies
 

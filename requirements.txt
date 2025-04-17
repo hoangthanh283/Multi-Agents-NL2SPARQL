@@ -109,6 +109,10 @@ kafka-utils=0.1=pypi_0
 kiwisolver=1.4.4=pypi_0
 kombu=5.5.0=pypi_0
 kubernetes=26.1.0=pypi_0
+langchain=0.3.23=pypi_0
+langchain-community=0.3.21=pypi_0
+langchain-core=0.3.51=pypi_0
+langchain-openai=0.3.12=pypi_0
 lanms-neo=1.0.2=pypi_0
 lazy-loader=0.3=pypi_0
 lb-common=0.1=pypi_0

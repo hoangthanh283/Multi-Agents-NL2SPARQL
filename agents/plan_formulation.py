@@ -50,7 +50,7 @@ class PlanFormulationAgent:
         refined_query: str, 
         mapped_entities: Dict[str, Any], 
         ontology_info: Dict[str, Any],
-        validation_feedback: Optional[str] = None
+        validation_feedback: Optional[str] = Noneen
     ) -> Dict[str, Any]:
         """
         Formulate an execution plan for SPARQL queries.
