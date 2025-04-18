@@ -12,7 +12,7 @@ LLM_CONFIG = {
             "api_key": OPEN_API_KEY,
         }
     ],
-    "temperature": 0.1,
+    "temperature": 0.0,
     "timeout": 600,
 }
 
@@ -21,7 +21,7 @@ AGENT_CONFIGS = {
     "master": {
         "name": "MasterAgent",
         "description": "Coordinates all slave agents and manages the overall conversation flow",
-        "llm_config": {**LLM_CONFIG, "temperature": 0.2},
+        "llm_config": {**LLM_CONFIG, "temperature": 0.0},
         "system_message": """You are the master coordinator for a Natural Language to SPARQL conversion system.
 Your job is to coordinate between specialized slave agents to convert natural language queries into 
 accurate SPARQL queries for querying knowledge graphs. Analyze user queries, delegate tasks
@@ -45,7 +45,7 @@ Your output should be a refined query that captures the semantic intent clearly.
     "ontology_mapping": {
         "name": "OntologyMappingAgent",
         "description": "Maps natural language entities to ontology terms",
-        "llm_config": {**LLM_CONFIG, "temperature": 0.1},
+        "llm_config": {**LLM_CONFIG, "temperature": 0.0},
         "system_message": """You are an ontology mapping specialist. Your task is to map natural 
 language terms to formal ontology terms. Analyze the context, term descriptions, and 
 ontology structure to find the best matches between user language and formal knowledge graph concepts."""
@@ -104,7 +104,7 @@ Your goal is to ensure queries will execute correctly against a SPARQL endpoint.
     "response_generation": {
         "name": "ResponseGenerationAgent",
         "description": "Generates natural language responses from SPARQL results",
-        "llm_config": {**LLM_CONFIG, "temperature": 0.7},
+        "llm_config": {**LLM_CONFIG, "temperature": 0.0},
         "system_message": """Transform SPARQL query results into natural language responses.
 Explain the results clearly to users who may not understand SPARQL or knowledge graph structure.
 Format information in a user-friendly way and provide context for the query results."""

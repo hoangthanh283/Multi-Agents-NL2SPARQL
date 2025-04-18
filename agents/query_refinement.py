@@ -1,10 +1,12 @@
 from typing import Any, Dict, List, Optional
 
 import autogen
+import numpy as np
 
 from config.agent_config import get_agent_config
 from database.qdrant_client import QdrantClient
 from models.embeddings import BiEncoderModel
+from utils.constants import VECTOR_SIMILARITY_THRESHOLD
 
 
 class QueryRefinementAgent:
@@ -108,7 +110,7 @@ class QueryRefinementAgent:
         """
         if not conversation_history:
             return []
-            
+
         # If we have very few history items, just return them all
         if len(conversation_history) <= limit:
             return conversation_history
@@ -133,14 +135,17 @@ class QueryRefinementAgent:
             similarities = []
             for item in history_vectors:
                 similarity = self._cosine_similarity(query_embedding, item["embedding"])
-                similarities.append((item["id"], similarity))
-            
-            # Sort by similarity
+                if similarity >= VECTOR_SIMILARITY_THRESHOLD:
+                    similarities.append((item["id"], similarity))
+            if similarities:
+                return []
+
+            # Sort by similarity.
             similarities.sort(key=lambda x: x[1], reverse=True)
             
-            # Get indices of most similar items
+            # Get indices of most similar items.
             relevant_indices = [idx for idx, _ in similarities[:limit]]
-            relevant_indices.sort()  # Maintain chronological order
+            relevant_indices.sort()  # Maintain chronological order.
             
             # Get the corresponding history items
             relevant_history = [conversation_history[i] for i in relevant_indices]
@@ -150,13 +155,12 @@ class QueryRefinementAgent:
             for item in recent_items:
                 if item not in relevant_history:
                     relevant_history.append(item)
-            
             return relevant_history
         except Exception as e:
             print(f"Error retrieving relevant history: {e}")
             # Fall back to most recent history
             return conversation_history[-limit:]
-    
+
     def _get_similar_examples(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
         Retrieve similar refinement examples from the vector database.
@@ -269,8 +273,6 @@ Include specific entity names whenever they're referenced directly or indirectly
         Returns:
             Cosine similarity score
         """
-        import numpy as np
-
         # Convert to numpy arrays
         v1 = np.array(vec1)
         v2 = np.array(vec2)
@@ -279,10 +281,8 @@ Include specific entity names whenever they're referenced directly or indirectly
         dot_product = np.dot(v1, v2)
         norm_v1 = np.linalg.norm(v1)
         norm_v2 = np.linalg.norm(v2)
-        
         if norm_v1 == 0 or norm_v2 == 0:
             return 0.0
-            
         return dot_product / (norm_v1 * norm_v2)
     
     def store_refinement_example(

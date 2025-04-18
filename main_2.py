@@ -139,7 +139,7 @@ def interactive_session(master_agent):
                 ans = ans[-1].get("query", "No SPARQL generated")
             logger.info("\nSPARQL Query:" + ans)
             
-            # Update conversation history
+            # Update conversation history.
             conversation_history.append({
                 "role": "user",
                 "content": user_query
