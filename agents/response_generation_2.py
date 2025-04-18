@@ -1,11 +1,12 @@
 import json
 from typing import Any, Dict, List, Optional
-
-from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from database.qdrant_client import QdrantClient
+
+
+from utils.constants import TOP_K_DRANT_QUERIES, QDRANT_SEARCH_THRESHOLD
 
 
 class ResponseGenerationAgent:
@@ -13,16 +14,13 @@ class ResponseGenerationAgent:
         """
         Initialize the response generation agent
         """
-
         self.agent = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.
         )
-
         self.qdrant_client = QdrantClient()
-    
         self.num_retry = 2
-        self.top_k = 6
+        self.top_k = TOP_K_DRANT_QUERIES
         self.collection_name = "ontology_embedding"
 
     def generate(self, steps: List[Dict[str, Any]], mapped_entities):
@@ -47,11 +45,12 @@ class ResponseGenerationAgent:
     def _prepare_step_prompt(self, step_query: str, step_query_type: str, previous_queries: Optional[List[Dict[str, Any]]]=None, mapped_entities=None):
         prompt = ChatPromptTemplate.from_messages([
             ("system", 
-             """You are a professional developer with experience in writing SPARQL for ontology file. Your task is to transform natural provided query to SPARQL based on the ontology code, query type. Please follow the detailed instruction below:
-             - If **query related to computation or compare**, first **convert the var to string by STR** and then **convert to number use xsd:integer or xsd:float**. 
+             """You are a professional developer with experience in writing SPARQL for ontology file. Your task is to transform natural provided query to SPARQL based on the ontology code, query type and combine with previous SPARQL code (if has). Please follow the detailed instruction below:
+             - If **query related to computation or compare**, first **convert the var to string by STR** and then **convert to number use xsd:integer or xsd:float**. For example: xsd:integet(STR(?a))
              - Please query number correctly not rdfs:label or rdfs:comment
              - If query need to find the numeric, please convert to get exactly number not reference
              - If can not convert the query to SPARQL, the output is {{"query": "", "step": "query of that step"}}
+             - Add PREFIX to the SPARQL query for xsd, rdfs and other (if necessary)
              **Output SPARQL type**:
              {sparql_type}
              **Provided query**:
@@ -98,11 +97,23 @@ class ResponseGenerationAgent:
         search_results = self.qdrant_client.client.query_points(
             collection_name=self.collection_name,
             query=self.qdrant_client.default_model.encode(step_query),
+            score_threshold=QDRANT_SEARCH_THRESHOLD,
             limit=self.top_k
         ).points
 
+        # If we could not find any match, then use the top-2 matches that can be find.
+        if not search_results:
+            search_results = self.qdrant_client.client.query_points(
+                collection_name=self.collection_name,
+                query=self.qdrant_client.default_model.encode(step_query),
+                limit=2
+            ).points
+
         code_part = ""
+        print("#"*300)
         for search_result in search_results:
+            print(f"search_result: {search_result}")
             code_part += search_result.payload["code"].strip()
+        import pdb; pdb.set_trace()
         code_part = code_part.strip()
         return code_part

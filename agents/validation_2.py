@@ -77,8 +77,11 @@ class ValidationAgent:
              """You are a professional developer with experience in writing SPARQL for ontology file. Your task is to validate the provided plan to transform natural provided user query to SPARQL is valid. Please follow the instruction below:
              - Check each step is correct. If not correct, provide how to improve in short for each step
              - If the step level is complex, if all property is describe in previous steps, it is correct. 
+             - Remember **SPARQL support direct computation in the SELECT query**
+             - **Remember do not care about the SPARQL detailed**
              - Check if the plan can answer the user query.
              - If plan is valid or can be accepted, the output is {{"is_valid": true, "feedback": []}}
+             - If your step is is too vague and does not specify how to check terms, then the output is {{"is_valid": true, "feedback": []}}
              The output format must be following this format:
              {{"is_valid": true or false, "feedback": [
                 {{"step": "step query", "feedback": "feedback"}}

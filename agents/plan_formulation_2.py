@@ -18,12 +18,10 @@ class PlanFormulationAgent:
         """
         Initialize the plan formulation agent
         """
-    
         self.agent = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.
         )
-    
         self.num_retry = 2
 
     def _prepare_plan_prompt(self, user_query: str, feedback: Optional[str] = None) -> List[Any]:
@@ -42,6 +40,7 @@ class PlanFormulationAgent:
         - If a query need to compute or find out the interval of time, divide query into simple natural queries and merge queries in last step. Else please not change the query.
         - Add level for each step: **simple**: can generate query immediately and **complex**: must use previous queries.
         - Add type of SPARQL query for each step: SELECT, ASK, DESCRIBE and CONSTRUCT.
+        - If your step query needs to get information, let's start your query with `Find`.
         - Do not create SPARQL query.
         - If can not create plan to transform to SPARQL, the output is []
         The output format must be following this format: 

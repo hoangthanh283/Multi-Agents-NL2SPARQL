@@ -77,7 +77,7 @@ Your task is to map natural language terms to formal ontology terms.
 Analyze the context, term descriptions, and ontology structure to find the best matches.""",
             "llm_config": {
                 "config_list": [{"model": "gpt-4o-mini", "api_key": OPEN_API_KEY}],
-                "temperature": 0.1
+                "temperature": 0.0
             }
         }
         

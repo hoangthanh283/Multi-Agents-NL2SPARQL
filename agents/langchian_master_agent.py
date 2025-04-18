@@ -52,9 +52,9 @@ class MasterAgent:
         """
         logger.info(f"Processing query: {user_query}")
         result = {"original_query": user_query, "conversation_history": conversation_history}
-
         try:
             # Step 1: Refine the query
+            # conversation_history = None
             refined_query = self._refine_query(user_query, conversation_history)
             result["refined_query"] = refined_query
             logger.info(f"Refined query: {refined_query}")
