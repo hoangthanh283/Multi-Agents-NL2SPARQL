@@ -1,1 +1,9 @@
-QDRANT_COLLECTIONS = frozenset(["query_patterns", "sparql_examples", "conversation_history", "refinement_examples", "ontology_embedding"])
+from enum import Enum
+
+
+class QdrantCollections(Enum):
+    QUERY_PATTERNS = "query_patterns"
+    SPARQL_EXAMPLES = "sparql_examples"
+    CONVERSATION_HISTORY = "conversation_history"
+    REFINEMENT_EXAMPLES = "refinement_examples"
+    ONTOLOGY_EMBEDDING = "ontology_embedding"

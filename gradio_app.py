@@ -4,8 +4,7 @@ import os
 import gradio as gr
 
 from agents.query_execution import QueryExecutionAgent
-from main import (initialize_agents, initialize_databases, initialize_models,
-                  initialize_tools)
+from main import create_master_agent, initialize_databases, initialize_models
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -13,19 +12,10 @@ GRAPHDB_URL = os.getenv("GRAPHDB_URL")
 GRAPHDB_REPO_ID = os.getenv("GRAPHDB_REPOSITORY")
 GRAPHDB_ENDPOINT = os.path.join(GRAPHDB_URL, GRAPHDB_REPO_ID)
 
-qdrant_client, elastic_client, ontology_store = initialize_databases()
-bi_encoder, cross_encoder, entity_recognition_model = initialize_models()
-template_tools, sparql_tools = initialize_tools()
-master_agent = initialize_agents(
-    qdrant_client, 
-    elastic_client,
-    ontology_store, 
-    bi_encoder, 
-    cross_encoder, 
-    entity_recognition_model,
-    template_tools,
-    sparql_tools
-)
+qdrant_client = initialize_databases()
+bi_encoder, _, entity_recognition_model = initialize_models()
+master_agent = create_master_agent(qdrant_client, bi_encoder, entity_recognition_model)
+
 # Initialize the query execution agent to run SPARQL against GraphDB.
 query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
 

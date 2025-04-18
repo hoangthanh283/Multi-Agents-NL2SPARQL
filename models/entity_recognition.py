@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 import torch
 from gliner import GLiNER
+
 GLINER_AVAILABLE = True
 
 

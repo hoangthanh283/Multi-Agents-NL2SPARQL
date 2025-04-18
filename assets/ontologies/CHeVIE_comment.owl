@@ -166,10 +166,10 @@ above the local reference ellipsoid).</rdfs:comment>
     <!-- https://CHeVIE.vn/ontologies/academicDegree -->
 
     <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/academicDegree">
-    	<rdfs:label xml:lang="en">Academic Degree</rdfs:label> // Thêm
-    	<rdfs:label xml:lang="vi">Học vị</rdfs:label> // Thêm
-    	<rdfs:comment xml:lang="en">An annotation property that specifies the academic degree(s) attained by a person. This property connects a Person to a Statement describing their academic qualifications.</rdfs:comment> // Thêm
-    	<rdfs:comment xml:lang="vi">Thuộc tính chú thích xác định học vị học thuật mà một người đạt được. Thuộc tính này kết nối một Người với một Phát biểu mô tả trình độ học vấn của họ.</rdfs:comment> // Thêm
+    	<rdfs:label xml:lang="en">Academic Degree</rdfs:label>
+    	<rdfs:label xml:lang="vi">Học vị</rdfs:label>
+    	<rdfs:comment xml:lang="en">An annotation property that specifies the academic degree(s) attained by a person. This property connects a Person to a Statement describing their academic qualifications.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Thuộc tính chú thích xác định học vị học thuật mà một người đạt được. Thuộc tính này kết nối một Người với một Phát biểu mô tả trình độ học vấn của họ.</rdfs:comment>
         <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
         <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
     </owl:AnnotationProperty>
@@ -2395,8 +2395,8 @@ sameThing(P1, P2) :- type(P1, Point), type(P2, Point), spaciallyIntersects(P1, P
 
     <owl:Class rdf:about="https://CHeVIE.vn/ontologies/TraditionalFestival">
         <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
-        <rdfs:label xml:lang="en">Traditional Festival</rdfs:label> // Thêm
-        <rdfs:label xml:lang="vi">Lễ hội truyền thống</rdfs:label> // Thêm
+        <rdfs:label xml:lang="en">Traditional Festival</rdfs:label>
+        <rdfs:label xml:lang="vi">Lễ hội truyền thống</rdfs:label>
     </owl:Class>
     
 

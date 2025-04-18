@@ -1,11 +1,12 @@
-from database.qdrant_client import QdrantClient
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.output_parsers import ResponseSchema
-from langchain.output_parsers import StructuredOutputParser
-from database.qdrant_client import QdrantClient
-from typing import List, Dict, Any, Optional
 import json
+from typing import Any, Dict, List, Optional
+
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+
+from database.qdrant_client import QdrantClient
+
 
 class ValidationAgent:
     """

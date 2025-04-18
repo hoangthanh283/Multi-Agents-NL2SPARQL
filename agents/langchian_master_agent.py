@@ -2,10 +2,10 @@ import json
 from typing import Any, Dict, List
 
 import autogen
+from loguru import logger
 
 from config.agent_config import get_agent_config
-from utils.logging_utils import setup_logging
-from loguru import logger
+
 
 class MasterAgent:
     """
