@@ -1,4 +1,5 @@
 import json
+import copy
 from typing import Any, Dict, List
 
 import autogen
@@ -38,6 +39,15 @@ class MasterAgent:
     def register_slave_agent(self, agent_type: str, agent_instance):
         """Register a slave agent with the master agent."""
         self.slave_agents[agent_type] = agent_instance
+    
+    def _execute_query(self, sparql_query: str) -> Dict[str, Any]:
+        """Delegate query execution to the query execution slave agent."""
+        if "query_execution" not in self.slave_agents:
+            return {
+                "success": False,
+                "error": "Query execution agent not available"
+            }
+        return self.slave_agents["query_execution"].execute_query(sparql_query)
 
     def process_query(self, user_query: str, conversation_history: List[Dict]) -> str:
         """
@@ -102,14 +112,35 @@ class MasterAgent:
                 response = self._generate_response(plan, mapped_entities)
                 result["response"] = response
                 logger.info(f"Generated response successfully")
+
+                # Step 6: Execute the query if validation passed
+                executed_sparql = result.get("response", [{}])[0].get("query")
+                result["sparql"] = executed_sparql
+                logger.info("*"*300)
+                logger.info(f"executed_sparql: {result['sparql']}")
+                if executed_sparql:
+                    execution_result = self._execute_query(executed_sparql)
+                    if hasattr(execution_result, "content"):  # Handle ChatResult object
+                        execution_result = {"success": False, "error": "Query execution error occurred"}
+                    result["execution"] = execution_result
+                    logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
+
+                    # Step 7: Generate response from the execution results
+                    response = self._generate_final_response(refined_query, result["sparql"], execution_result)
+                    if hasattr(response, 'content'):  # Handle ChatResult object
+                        response = str(response.content)
+                    result["answer"] = response
+                    logger.info(f"Generated response")
+                else:
+                    error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
             else:
                 error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
-                result["response"] = error_response
+                result["answer"] = error_response
                 logger.info(f"Generated error response due to validation failure")
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             result["error"] = str(e)
-            result["response"] = f"I'm sorry, but an error occurred while processing your question: {str(e)}"
+            result["answer"] = f"I'm sorry, but an error occurred while processing your question: {str(e)}"
         return result
 
     def _refine_query(self, raw_query: str, conversation_history: List[Dict]) -> str:
@@ -168,5 +199,21 @@ class MasterAgent:
     def _generate_response(self, plan, mapped_entities=None):
         if "response_generation" not in self.slave_agents:
             return "Sorry I can not answer the question"
-
         return self.slave_agents["response_generation"].generate(plan, mapped_entities)
+
+    def _generate_final_response(
+        self, 
+        refined_query: str,
+        sparql_query: str,
+        execution_result: Dict[str, Any]
+    ) -> str:
+        """Delegate response generation to the response generation slave agent."""
+        if "response_generation" not in self.slave_agents:
+            # Fallback to simple JSON dump if agent not available
+            return f"Here are the results: {json.dumps(execution_result, indent=2)}"
+        
+        return self.slave_agents["response_generation"].generate_response(
+            refined_query,
+            sparql_query,
+            execution_result
+        )

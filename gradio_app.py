@@ -4,7 +4,7 @@ import os
 import gradio as gr
 
 from agents.query_execution import QueryExecutionAgent
-from main import create_master_agent, initialize_databases, initialize_models
+from main import create_master_agent, initialize_databases, initialize_models, process_query
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -26,19 +26,23 @@ def process_gradio_query(user_query, conversation_history):
     Returns: intermediate reasoning, final response, generated SPARQL query, updated history.
     """
     # Process the query using the master agent.
-    result = master_agent.process_query(user_query, conversation_history)
-    
+    # result = master_agent.process_query(user_query, conversation_history)
+    result = process_query(master_agent, user_query, conversation_history)
+
     # Generate intermediate reasoning from the result object
     intermediate_reasoning = generate_intermediate_reasoning(result)
     
     # Extract the final response and SPARQL query
-    final_response = result.get("response", "No final response.")
-    generated_sparql = result.get("sparql", "No SPARQL query generated.")
+    # final_response = result.get("response", "No final response.")
+    final_answer = result.get("answer", "No final response.")
+    # generated_sparql = result.get("sparql", "No SPARQL query generated.")
+    generated_sparql = result["response"][-1].get("query", "No SPARQL generated")
+    logger.info(f"\n GRADIO SPARQL Query: {generated_sparql}")
 
     # Update conversation history with the interaction.
     conversation_history.append({"role": "user", "content": user_query})
-    conversation_history.append({"role": "assistant", "content": final_response})
-    return intermediate_reasoning, final_response, generated_sparql, conversation_history
+    conversation_history.append({"role": "assistant", "content": generated_sparql})
+    return intermediate_reasoning, final_answer, generated_sparql, conversation_history
 
 
 def generate_intermediate_reasoning(result):
@@ -65,7 +69,7 @@ def generate_intermediate_reasoning(result):
         reasoning_parts.append(entities_info)
     
     # Add mapped entities
-    if "mapped_entities" in result:
+    if "mapped_entities" in result and result["mapped_entities"]:
         mapped_entities = result["mapped_entities"]
         mapped_info = "Mapped Ontology Terms:\n"
         

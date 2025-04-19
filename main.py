@@ -14,6 +14,7 @@ from agents.entity_recognition import EntityRecognitionAgent
 from agents.langchian_master_agent import MasterAgent
 from agents.plan_formulation_2 import PlanFormulationAgent
 from agents.query_refinement import QueryRefinementAgent
+from agents.query_execution import QueryExecutionAgent
 from agents.response_generation_2 import ResponseGenerationAgent
 from agents.validation_2 import ValidationAgent
 from database.qdrant_client import QdrantClient
@@ -23,6 +24,9 @@ from utils.constants import QdrantCollections
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
+GRAPHDB_URL = os.getenv("GRAPHDB_URL")
+GRAPHDB_REPO_ID = os.getenv("GRAPHDB_REPOSITORY")
+GRAPHDB_ENDPOINT = os.path.join(GRAPHDB_URL, GRAPHDB_REPO_ID)
 
 
 def initialize_databases():
@@ -81,11 +85,11 @@ def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
         qdrant_client=qdrant_client,
         embedding_model=bi_encoder
     )
-    
     entity_recognition_agent = EntityRecognitionAgent(
         entity_recognition_model=entity_recognition_model, 
         ontology_store=None
     )
+    query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
     plan_formulation_agent = PlanFormulationAgent()
     validation_agent = ValidationAgent()
     response_generation_agent = ResponseGenerationAgent()
@@ -94,6 +98,7 @@ def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
     master_agent.register_slave_agent("plan_formulation", plan_formulation_agent)
     master_agent.register_slave_agent("validation", validation_agent)
     master_agent.register_slave_agent("response_generation", response_generation_agent)
+    master_agent.register_slave_agent("query_execution", query_execution_agent)
     return master_agent
 
 
@@ -146,7 +151,6 @@ def interactive_session(master_agent):
             logger.error(f"Error processing query: {e}")
             logger.info(f"Sorry, there was an error processing your query: {str(e)}")
     logger.info("Interactive session ended.")
-
     return result
 
 

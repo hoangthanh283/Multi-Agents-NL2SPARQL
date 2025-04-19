@@ -1,12 +1,11 @@
-import json
-from typing import Any, Dict, List, Optional
-
-from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-
 from database.qdrant_client import QdrantClient
-
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.output_parsers import ResponseSchema
+from langchain.output_parsers import StructuredOutputParser
+from database.qdrant_client import QdrantClient
+from typing import List, Dict, Any, Optional
+import json
 
 class ValidationAgent:
     """
@@ -55,14 +54,14 @@ class ValidationAgent:
                 validation_ans = json.loads(validation_ans.content)
                 break
             except Exception as e:
-                print(e, validation_ans.content)
+                # print(e, validation_ans.content)
+                print(e)
                 validation_ans = {
                     "is_valid": False,
                     "validation_type": "structure",
                     "feedback": "Invalid plan format: Plan is empty or not a list."
                 }
                 continue
-
         return validation_ans
 
     def _prepare_validation_prompt(self, user_query, plan):
@@ -104,3 +103,4 @@ class ValidationAgent:
             ("user", "{user_query}")
         ])
         return prompt.format_messages(user_query=user_query)
+    
