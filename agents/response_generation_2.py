@@ -1,14 +1,14 @@
 import json
 from typing import Any, Dict, List, Optional
+
+import autogen
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from database.qdrant_client import QdrantClient
-
-import autogen
-from utils.logging_utils import setup_logging
 from config.agent_config import get_agent_config
-from utils.constants import TOP_K_DRANT_QUERIES, QDRANT_SEARCH_THRESHOLD
+from database.qdrant_client import QdrantClient
+from utils.constants import QDRANT_SEARCH_THRESHOLD, TOP_K_DRANT_QUERIES
+from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 

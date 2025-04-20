@@ -84,6 +84,5 @@ class PlanFormulationAgent:
             except Exception as e:
                 print(e)
                 plan = None
-                continue 
-    
+                continue
         return plan

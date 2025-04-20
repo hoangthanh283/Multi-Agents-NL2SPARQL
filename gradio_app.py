@@ -4,7 +4,8 @@ import os
 import gradio as gr
 
 from agents.query_execution import QueryExecutionAgent
-from main import create_master_agent, initialize_databases, initialize_models, process_query
+from main import (create_master_agent, initialize_databases, initialize_models,
+                  process_query)
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -32,8 +33,7 @@ def process_gradio_query(user_query, conversation_history):
     # Generate intermediate reasoning from the result object
     intermediate_reasoning = generate_intermediate_reasoning(result)
     
-    # Extract the final response and SPARQL query
-    # final_response = result.get("response", "No final response.")
+    # Extract the final response and SPARQL query.
     final_answer = result.get("answer", "No final response.")
     # generated_sparql = result.get("sparql", "No SPARQL query generated.")
     generated_sparql = result["response"][-1].get("query", "No SPARQL generated")
@@ -96,9 +96,8 @@ def generate_intermediate_reasoning(result):
                 label = inst.get("label", inst.get("text", "Unknown"))
                 uri = inst.get("uri", "No URI")
                 mapped_info += f"- {label} ({uri})\n"
-        
         reasoning_parts.append(mapped_info)
-    
+
     # Add template/query type information
     if "query_metadata" in result:
         metadata = result["query_metadata"]

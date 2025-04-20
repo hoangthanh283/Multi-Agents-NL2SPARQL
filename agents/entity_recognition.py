@@ -36,7 +36,7 @@ class EntityRecognitionAgent:
             "FILTER",         # Filter conditions
             "QUERY_TYPE"      # Type of query (SELECT, ASK, etc.)
         ]
-        
+
         # Common verbs and prepositions to clean up from entity text
         self.stopwords = [
             "a", "an", "the", "is", "are", "was", "were", "has", "have", 
