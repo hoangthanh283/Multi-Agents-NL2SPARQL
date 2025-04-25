@@ -1,0 +1,89 @@
+services:
+  api:
+    replicas: 2
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "200m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: "debug"
+
+  worker:
+    replicas: 3
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    environment:
+      WORKER_CONCURRENCY: "4"
+      WORKER_PREFETCH_MULTIPLIER: "1"
+
+  graphdb:
+    replicas: 1
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    environment:
+      GDB_HEAP_SIZE: "2g"
+      GDB_MIN_MEM: "1g"
+
+  redis:
+    replicas: 1
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+    environment:
+      REDIS_MAXMEMORY: "256mb"
+      REDIS_MAXMEMORY_POLICY: "allkeys-lru"
+
+  kafka:
+    replicas: 1
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms512M"
+
+  ray-head:
+    replicas: 1
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    environment:
+      RAY_memory_monitor_refresh_ms: "0"
+      RAY_debug_mode: "1"
+
+  ray-worker:
+    replicas: 2
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    environment:
+      RAY_memory_monitor_refresh_ms: "0"

@@ -1,0 +1,2 @@
+[INFO ] 2025-04-25 13:52:01,252 [main | c.o.g.Config] Using 'jar:file:/opt/graphdb/dist/lib/graphdb-application-common-10.0.0.jar!/com/ontotext/graphdb/logback.xml' as logback's configuration file
+[INFO ] 2025-04-25 13:52:23,135 [main | c.o.g.s.GraphDB] Starting GraphDB in workbench mode.

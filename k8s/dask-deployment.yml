@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dask-scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dask-scheduler
+  template:
+    metadata:
+      labels:
+        app: dask-scheduler
+    spec:
+      containers:
+      - name: scheduler
+        image: daskdev/dask:latest
+        args: ["dask-scheduler"]
+        ports:
+        - containerPort: 8786
+          name: scheduler
+        - containerPort: 8787
+          name: dashboard
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dask-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dask-worker
+  template:
+    metadata:
+      labels:
+        app: dask-worker
+    spec:
+      containers:
+      - name: worker
+        image: daskdev/dask:latest
+        args:
+        - "dask-worker"
+        - "tcp://dask-scheduler:8786"
+        - "--nthreads"
+        - "2"
+        - "--memory-limit"
+        - "4GB"
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dask-scheduler
+spec:
+  selector:
+    app: dask-scheduler
+  ports:
+  - name: scheduler
+    port: 8786
+    targetPort: 8786
+  - name: dashboard
+    port: 8787
+    targetPort: 8787

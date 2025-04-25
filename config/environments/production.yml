@@ -1,0 +1,131 @@
+services:
+  api:
+    replicas: 5
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    environment:
+      DEBUG: "false"
+      LOG_LEVEL: "info"
+      ENABLE_CACHING: "true"
+      RATE_LIMIT_ENABLED: "true"
+      CIRCUIT_BREAKER_ENABLED: "true"
+
+  worker:
+    replicas: 8
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+    environment:
+      WORKER_CONCURRENCY: "8"
+      WORKER_PREFETCH_MULTIPLIER: "4"
+      ENABLE_PRIORITY_QUEUES: "true"
+
+  graphdb:
+    replicas: 3
+    resources:
+      requests:
+        memory: "8Gi"
+        cpu: "4000m"
+      limits:
+        memory: "16Gi"
+        cpu: "8000m"
+    environment:
+      GDB_HEAP_SIZE: "8g"
+      GDB_MIN_MEM: "4g"
+      ENABLE_INFERENCE: "true"
+      ENABLE_MONITORING: "true"
+
+  redis:
+    replicas: 3
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "1000m"
+      limits:
+        memory: "8Gi"
+        cpu: "2000m"
+    environment:
+      REDIS_MAXMEMORY: "6gb"
+      REDIS_MAXMEMORY_POLICY: "volatile-lru"
+      REDIS_ENABLE_PERSISTENCE: "true"
+      REDIS_ENABLE_REPLICATION: "true"
+
+  kafka:
+    replicas: 3
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+    environment:
+      KAFKA_HEAP_OPTS: "-Xmx4G -Xms2G"
+      KAFKA_REPLICATION_FACTOR: "3"
+      KAFKA_MIN_INSYNC_REPLICAS: "2"
+      KAFKA_ENABLE_AUTO_CREATE_TOPICS: "false"
+
+  ray-head:
+    replicas: 1
+    resources:
+      requests:
+        memory: "8Gi"
+        cpu: "4000m"
+      limits:
+        memory: "16Gi"
+        cpu: "8000m"
+    environment:
+      RAY_memory_monitor_refresh_ms: "1000"
+      RAY_object_store_memory: "8000000000"
+      RAY_enable_multi_tenancy: "true"
+      RAY_metrics_export_port: "8080"
+
+  ray-worker:
+    replicas: 5
+    resources:
+      requests:
+        memory: "8Gi"
+        cpu: "4000m"
+      limits:
+        memory: "16Gi"
+        cpu: "8000m"
+    environment:
+      RAY_memory_monitor_refresh_ms: "1000"
+      RAY_object_store_memory: "8000000000"
+      RAY_worker_thread_multiplier: "2"
+
+  prometheus:
+    replicas: 2
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    environment:
+      PROMETHEUS_RETENTION_TIME: "30d"
+      PROMETHEUS_STORAGE_SIZE: "100Gi"
+
+  grafana:
+    replicas: 2
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel,grafana-worldmap-panel"

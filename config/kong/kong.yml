@@ -1,0 +1,146 @@
+_format_version: "2.1"
+_transform: true
+
+services:
+  - name: nl2sparql-api
+    url: http://api:8000
+    routes:
+      - name: api-route
+        paths:
+          - /api
+        strip_path: true
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 60
+          hour: 1000
+          policy: local
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          headers:
+            - Accept
+            - Authorization
+            - Content-Type
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+          key_in_header: true
+          key_in_query: true
+          hide_credentials: true
+      - name: prometheus
+        config:
+          status_codes: true
+          latency: true
+          bandwidth: true
+          per_consumer: true
+
+  - name: graphdb-service
+    url: http://graphdb:7200
+    routes:
+      - name: graphdb-route
+        paths:
+          - /graphdb
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 30
+          hour: 500
+      - name: key-auth
+      - name: prometheus
+
+  - name: ray-dashboard
+    url: http://ray-head:8265
+    routes:
+      - name: ray-dashboard-route
+        paths:
+          - /ray
+        strip_path: true
+    plugins:
+      - name: basic-auth
+        config:
+          hide_credentials: true
+      - name: prometheus
+
+  - name: prometheus-service
+    url: http://prometheus:9090
+    routes:
+      - name: prometheus-route
+        paths:
+          - /metrics
+        strip_path: true
+    plugins:
+      - name: basic-auth
+      - name: prometheus
+
+  - name: grafana-service
+    url: http://grafana:3000
+    routes:
+      - name: grafana-route
+        paths:
+          - /grafana
+        strip_path: true
+    plugins:
+      - name: basic-auth
+      - name: prometheus
+
+consumers:
+  - username: admin
+    custom_id: admin
+    keyauth_credentials:
+      - key: ${ADMIN_API_KEY}
+  - username: app
+    custom_id: app
+    keyauth_credentials:
+      - key: ${APP_API_KEY}
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: Kong-Request-ID
+      generator: uuid#counter
+      echo_downstream: true
+  - name: proxy-cache
+    config:
+      response_code:
+        - 200
+      request_method:
+        - GET
+      content_type:
+        - application/json
+      cache_ttl: 300
+      strategy: memory
+      memory:
+        dictionary_name: kong_cache
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - X-Request-Time:${time}
+  - name: response-transformer
+    config:
+      add:
+        headers:
+          - X-Response-Time:${latency}
+  - name: ip-restriction
+    config:
+      allow:
+        - 0.0.0.0/0
+      deny:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16

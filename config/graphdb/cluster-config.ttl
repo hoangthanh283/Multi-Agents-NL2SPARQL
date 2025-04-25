@@ -1,0 +1,32 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+@prefix sr: <http://www.openrdf.org/config/repository/sail#> .
+@prefix sail: <http://www.openrdf.org/config/sail#> .
+@prefix graphdb: <http://www.ontotext.com/config/graphdb#> .
+
+[] a rep:Repository ;
+    rep:repositoryID "CHeVIE" ;
+    rdfs:label "CHeVIE Ontology Repository" ;
+    rep:repositoryImpl [
+        rep:repositoryType "graphdb:SailRepository" ;
+        sr:sailImpl [
+            sail:sailType "graphdb:Sail" ;
+            graphdb:base-URL "http://localhost:7200" ;
+            graphdb:repository-type "master" ;
+            graphdb:enable-context-index true ;
+            graphdb:enable-fts-index true ;
+            graphdb:enable-predicate-list true ;
+            graphdb:in-memory-literal-properties true ;
+            graphdb:enablePredicateList "true" ;
+            graphdb:entity-index-size "10000000" ;
+            graphdb:entity-id-size "32" ;
+            graphdb:cache-memory "80G" ;
+            graphdb:tuple-index-memory "2G" ;
+            graphdb:query-timeout "300000" ;
+            graphdb:query-limit-results "100000" ;
+            graphdb:worker-threads "16" ;
+            graphdb:cluster-nodes "node1,node2,node3" ;
+            graphdb:replication-port "5721" ;
+            graphdb:cluster-timeout "60000"
+        ]
+    ] .

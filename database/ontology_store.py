@@ -1,14 +1,38 @@
 import logging
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
+import redis
 from rdflib import BNode, Graph, Literal, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
 from SPARQLWrapper import JSON, SPARQLWrapper
 
 logger = logging.getLogger(__name__)
+
+def cache_result(expire_time=3600):
+    """Redis cache decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(self, *args, **kwargs):
+            if not hasattr(self, 'redis_client'):
+                return f(self, *args, **kwargs)
+                
+            cache_key = f"{f.__name__}:{str(args)}:{str(kwargs)}"
+            result = self.redis_client.get(cache_key)
+            
+            if result is not None:
+                return pd.read_json(result)
+                
+            result = f(self, *args, **kwargs)
+            if isinstance(result, pd.DataFrame):
+                self.redis_client.setex(cache_key, expire_time, result.to_json())
+            return result
+        return decorated_function
+    return decorator
 
 class OntologyStore:
     """
@@ -20,21 +44,26 @@ class OntologyStore:
         self, 
         local_path: Optional[str] = None,
         endpoint_url: Optional[str] = None,
-        prefixes: Optional[Dict[str, str]] = None
+        prefixes: Optional[Dict[str, str]] = None,
+        redis_url: Optional[str] = "redis://localhost:6379/0",
+        max_workers: int = 10
     ):
-        """
-        Initialize the ontology store.
-        
-        Args:
-            local_path: Path to local ontology file (RDF/OWL/TTL)
-            endpoint_url: URL of SPARQL endpoint for remote ontology
-            prefixes: Dictionary of namespace prefixes
-        """
+        """Initialize the ontology store with Redis cache and thread pool."""
         self.local_path = local_path
-        # Default to the GraphDB container endpoint if no endpoint is provided.
         self.endpoint_url = endpoint_url if endpoint_url else "http://localhost:7200/repositories/CHeVIE"
         
-        # Initialize SPARQL wrapper for GraphDB
+        # Initialize Redis client
+        try:
+            self.redis_client = redis.from_url(redis_url)
+            logger.info("Successfully connected to Redis")
+        except Exception as e:
+            logger.warning(f"Failed to connect to Redis: {e}")
+            self.redis_client = None
+            
+        # Initialize thread pool
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        
+        # Initialize SPARQL wrapper with connection pooling
         self.sparql = SPARQLWrapper(self.endpoint_url)
         self.sparql.setReturnFormat(JSON)
         
@@ -399,6 +428,7 @@ class OntologyStore:
         self.stats["property_count"] = len(self.properties)
         self.stats["instance_count"] = len(self.instances)
     
+    @cache_result()
     def _query_graphdb(self, query: str) -> pd.DataFrame:
         """
         Execute a SPARQL query against GraphDB and return results as a DataFrame.

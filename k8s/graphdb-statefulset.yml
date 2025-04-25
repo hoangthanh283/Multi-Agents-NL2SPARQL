@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: graphdb
+spec:
+  serviceName: graphdb
+  replicas: 3
+  selector:
+    matchLabels:
+      app: graphdb
+  template:
+    metadata:
+      labels:
+        app: graphdb
+    spec:
+      containers:
+      - name: graphdb
+        image: ontotext/graphdb:10.0.0
+        ports:
+        - containerPort: 7200
+          name: http
+        - containerPort: 5721
+          name: cluster
+        volumeMounts:
+        - name: graphdb-config
+          mountPath: /opt/graphdb/conf
+        - name: graphdb-data
+          mountPath: /opt/graphdb/home
+        - name: graphdb-logs
+          mountPath: /opt/graphdb/logs
+        env:
+        - name: GDB_JAVA_OPTS
+          value: "-Xmx4g -Xms2g"
+        - name: GDB_HEAP_SIZE
+          value: "4g"
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        readinessProbe:
+          httpGet:
+            path: /protocol
+            port: 7200
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /protocol
+            port: 7200
+          initialDelaySeconds: 120
+          periodSeconds: 20
+      volumes:
+      - name: graphdb-config
+        configMap:
+          name: graphdb-config
+          items:
+          - key: cluster-config.ttl
+            path: cluster-config.ttl
+  volumeClaimTemplates:
+  - metadata:
+      name: graphdb-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Gi
+  - metadata:
+      name: graphdb-logs
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi

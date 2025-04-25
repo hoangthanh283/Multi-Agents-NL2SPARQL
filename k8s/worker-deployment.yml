@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nl2sparql-worker
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: nl2sparql-worker
+  template:
+    metadata:
+      labels:
+        app: nl2sparql-worker
+    spec:
+      containers:
+      - name: worker
+        image: nl2sparql-worker:latest
+        env:
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: CELERY_BROKER_URL
+          value: "redis://redis:6379/1"
+        - name: CELERY_RESULT_BACKEND
+          value: "redis://redis:6379/2"
+        - name: GRAPHDB_URL
+          value: "http://graphdb:7200/repositories/CHeVIE"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"

@@ -1,219 +1,138 @@
+import asyncio
 import copy
 import json
+import logging
 from typing import Any, Dict, List
 
 import autogen
+import ray
+from langchain.agents import Tool
+from langchain.memory import ConversationBufferMemory
 from loguru import logger
+from prometheus_client import Counter, Histogram
 
 from config.agent_config import get_agent_config
+from config.ray_config import DistributedAgent
+from utils.kafka_handler import QUERY_TOPIC, RESULT_TOPIC, kafka_handler
+from utils.monitoring import metrics_logger
 
+logger = logging.getLogger(__name__)
 
-class MasterAgent:
-    """
-    Master agent that coordinates the Natural Language to SPARQL conversion system.
-    Manages the workflow between slave agents and synthesizes responses.
-    """
-    
-    def __init__(self):
-        """Initialize the master agent and all slave agents."""
-        # Get configuration for master agent
-        master_config = get_agent_config("master")
+# Metrics
+AGENT_REQUESTS = Counter('agent_requests_total', 'Total number of agent requests', ['agent_type'])
+AGENT_PROCESSING_TIME = Histogram('agent_processing_seconds', 'Time spent processing requests', ['agent_type'])
+
+@ray.remote
+class DistributedMasterAgent(DistributedAgent):
+    def __init__(self, agent_id: str):
+        super().__init__(agent_id)
+        self.memory = ConversationBufferMemory(return_messages=True)
+        self.tools: List[Tool] = []
+        self.sub_agents = {}
+        self._initialize_sub_agents()
+
+    def _initialize_sub_agents(self):
+        """Initialize distributed sub-agents"""
+        self.sub_agents = {
+            'entity_recognition': ray.remote(EntityRecognitionAgent).remote(),
+            'ontology_mapping': ray.remote(OntologyMappingAgent).remote(),
+            'plan_formulation': ray.remote(PlanFormulationAgent).remote(),
+            'sparql_construction': ray.remote(SPARQLConstructionAgent).remote(),
+            'validation': ray.remote(ValidationAgent).remote(),
+        }
+
+    async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a task using distributed sub-agents"""
+        AGENT_REQUESTS.labels(agent_type='master').inc()
         
-        # Initialize master agent with AutoGen
-        self.agent = autogen.AssistantAgent(
-            name=master_config["name"],
-            system_message=master_config["system_message"],
-            llm_config=master_config["llm_config"]
-        )
-        
-        # Initialize human proxy for interaction
-        self.user_proxy = autogen.UserProxyAgent(
-            name="UserProxy",
-            human_input_mode="ALWAYS",
-            is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
-        )
-        
-        # Dictionary to hold all slave agents
-        self.slave_agents = {}
+        with AGENT_PROCESSING_TIME.labels(agent_type='master').time():
+            try:
+                # Send task to Kafka for logging
+                kafka_handler.produce_message(QUERY_TOPIC, {
+                    'task_id': task.get('id'),
+                    'query': task.get('query'),
+                    'timestamp': task.get('timestamp')
+                })
 
-    def register_slave_agent(self, agent_type: str, agent_instance):
-        """Register a slave agent with the master agent."""
-        self.slave_agents[agent_type] = agent_instance
-    
-    def _execute_query(self, sparql_query: str) -> Dict[str, Any]:
-        """Delegate query execution to the query execution slave agent."""
-        if "query_execution" not in self.slave_agents:
-            return {
-                "success": False,
-                "error": "Query execution agent not available"
-            }
-        return self.slave_agents["query_execution"].execute_query(sparql_query)
+                # Process task using Ray actors
+                result = await self._process_distributed(task)
 
-    def process_query(self, user_query: str, conversation_history: List[Dict]) -> str:
-        """
-        Process a natural language query through the entire agent workflow.
-        
-        Args:
-            user_query: The raw query from the user
-            conversation_history: List of previous conversation messages
-            
-        Returns:
-            SPARQL query
-        """
-        logger.info(f"Processing query: {user_query}")
-        result = {"original_query": user_query, "conversation_history": conversation_history}
-        try:
-            # Step 1: Refine the query
-            # conversation_history = None
-            refined_query = self._refine_query(user_query, conversation_history)
-            result["refined_query"] = refined_query
-            logger.info(f"Refined query: {refined_query}")
+                # Log metrics
+                metrics_logger.log_metrics({
+                    'task_id': task.get('id'),
+                    'processing_time': result.get('processing_time'),
+                    'success': result.get('success', False)
+                })
 
-            # Step 2: Recognize entities in the query
-            entities = self._recognize_entities(refined_query)
-            if hasattr(entities, 'content'):  # Handle ChatResult object
-                entities = {"all_entities": []}  # Fallback if response is invalid
-            result["entities"] = entities
-            logger.info(f"Recognized {len(entities.get('all_entities', []))} entities")
+                # Send result to Kafka
+                kafka_handler.produce_message(RESULT_TOPIC, result)
 
-            # Step 3: Map entities to ontology terms
-            mapped_entities = self._map_entities(entities, refined_query)
-            if hasattr(mapped_entities, 'content'):  # Handle ChatResult object
-                mapped_entities = {
-                    "classes": [],
-                    "properties": [],
-                    "instances": [],
-                    "literals": [],
-                    "unknown": entities.get("all_entities", [])
+                return result
+
+            except Exception as e:
+                error_msg = f"Error processing task: {str(e)}"
+                logger.error(error_msg)
+                return {
+                    'success': False,
+                    'error': error_msg
                 }
-            result["mapped_entities"] = mapped_entities
-            logger.info(f"Mapped entities to ontology terms")
 
-            # Step 4: Planning 
-            plan = self._formulate_plan(refined_query)
-            result["plan"] = plan
-            logger.info("Create plan for SPARQL query successfully: {}".format(plan))
-
-            # Step 5: Validation the plan
-            validation_result = self._validate_plan(plan, refined_query)
-            result["validation"] = validation_result
-            logger.info("Validation result: {}".format(validation_result))
-
-            if not validation_result.get("is_valid", False):
-                feedback = validation_result.get("feedback", None)
-                plan = self._formulate_plan(refined_query, feedback)
-                result["plan"] = plan
-                logger.info("Fixed plan successfully: {}".format(plan))
-                validation_result = self._validate_plan(plan, refined_query)
-                result["validation"] = validation_result
-                logger.info("Validation result: {}".format(validation_result))
-
-            if validation_result.get("is_valid", False):
-                response = self._generate_response(plan, mapped_entities)
-                result["response"] = response
-                logger.info(f"Generated response successfully")
-
-                # Step 6: Execute the query if validation passed
-                executed_sparql = result.get("response", [{}])[0].get("query")
-                result["sparql"] = executed_sparql
-                logger.info("*"*300)
-                logger.info(f"executed_sparql: {result['sparql']}")
-                if executed_sparql:
-                    execution_result = self._execute_query(executed_sparql)
-                    if hasattr(execution_result, "content"):  # Handle ChatResult object
-                        execution_result = {"success": False, "error": "Query execution error occurred"}
-                    result["execution"] = execution_result
-                    logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
-
-                    # Step 7: Generate response from the execution results
-                    response = self._generate_final_response(refined_query, result["sparql"], execution_result)
-                    if hasattr(response, 'content'):  # Handle ChatResult object
-                        response = str(response.content)
-                    result["answer"] = response
-                    logger.info(f"Generated response")
-                else:
-                    error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
-            else:
-                error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
-                result["answer"] = error_response
-                logger.info(f"Generated error response due to validation failure")
-        except Exception as e:
-            logger.error(f"Error processing query: {e}")
-            result["error"] = str(e)
-            result["answer"] = f"I'm sorry, but an error occurred while processing your question: {str(e)}"
-        return result
-
-    def _refine_query(self, raw_query: str, conversation_history: List[Dict]) -> str:
-        """Delegate query refinement to the query refinement slave agent."""
-        if "query_refinement" not in self.slave_agents:
-            return raw_query  # Fallback to raw query if agent not available
-        
+    async def _process_distributed(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Process task using distributed sub-agents"""
         try:
-            # Get the refined query from the agent
-            refined_query = self.slave_agents["query_refinement"].refine_query(raw_query, conversation_history)
-            return refined_query
+            # Entity recognition
+            entities_future = self.sub_agents['entity_recognition'].process_task.remote(task)
+            entities = await ray.get(entities_future)
+
+            # Ontology mapping
+            mapping_task = {**task, 'entities': entities}
+            mapping_future = self.sub_agents['ontology_mapping'].process_task.remote(mapping_task)
+            mappings = await ray.get(mapping_future)
+
+            # Plan formulation
+            plan_task = {**mapping_task, 'mappings': mappings}
+            plan_future = self.sub_agents['plan_formulation'].process_task.remote(plan_task)
+            plan = await ray.get(plan_future)
+
+            # SPARQL construction
+            sparql_task = {**plan_task, 'plan': plan}
+            sparql_future = self.sub_agents['sparql_construction'].process_task.remote(sparql_task)
+            sparql = await ray.get(sparql_future)
+
+            # Validation
+            validation_task = {**sparql_task, 'sparql': sparql}
+            validation_future = self.sub_agents['validation'].process_task.remote(validation_task)
+            validation = await ray.get(validation_future)
+
+            if not validation.get('valid', False):
+                return {
+                    'success': False,
+                    'error': validation.get('error', 'Invalid SPARQL query')
+                }
+
+            return {
+                'success': True,
+                'query': task.get('query'),
+                'sparql': sparql,
+                'entities': entities,
+                'mappings': mappings,
+                'plan': plan,
+                'validation': validation
+            }
+
         except Exception as e:
-            logger.error(f"Error refining query: {e}")
-            # Return original query if refinement fails
-            return raw_query
+            logger.error(f"Error in distributed processing: {e}")
+            raise
 
-    def _recognize_entities(self, refined_query: str) -> Dict[str, Any]:
-        """Delegate entity recognition to the entity recognition slave agent."""
-        if "entity_recognition" not in self.slave_agents:
-            return {"all_entities": []}  # Return empty dict if agent not available
-        return self.slave_agents["entity_recognition"].recognize_entities(refined_query)
+    async def update_tools(self, tools: List[Tool]) -> None:
+        """Update available tools"""
+        self.tools = tools
+        # Distribute tools to sub-agents as needed
+        tool_updates = []
+        for agent in self.sub_agents.values():
+            tool_updates.append(agent.update_tools.remote(tools))
+        await ray.get(tool_updates)
 
-    def _map_entities(self, entities: Dict[str, Any], query_context: str) -> Dict[str, Any]:
-        """Delegate entity mapping to the ontology mapping slave agent."""
-        if "ontology_mapping" not in self.slave_agents:
-            return {
-                "classes": [],
-                "properties": [],
-                "instances": [],
-                "literals": [],
-                "unknown": entities.get("all_entities", [])
-            }
-        return self.slave_agents["ontology_mapping"].map_entities(entities, query_context)
-
-    def _formulate_plan(self, refined_query, feedback=None):
-        if "plan_formulation" not in self.slave_agents:
-            return []
-
-        return self.slave_agents["plan_formulation"].formulate_plan(refined_query, feedback)
-
-    def _validate_plan(self, plan, refined_query):
-        if "validation" not in self.slave_agents:
-            return {
-                "is_valid": True,
-                "feedback": []
-            }
-        return self.slave_agents["validation"].validate_plan(
-            execution_plan={
-                "steps": plan
-            },
-            query_context={
-                "user_query": refined_query
-            }
-        )
-
-    def _generate_response(self, plan, mapped_entities=None):
-        if "response_generation" not in self.slave_agents:
-            return "Sorry I can not answer the question"
-        return self.slave_agents["response_generation"].generate(plan, mapped_entities)
-
-    def _generate_final_response(
-        self, 
-        refined_query: str,
-        sparql_query: str,
-        execution_result: Dict[str, Any]
-    ) -> str:
-        """Delegate response generation to the response generation slave agent."""
-        if "response_generation" not in self.slave_agents:
-            # Fallback to simple JSON dump if agent not available
-            return f"Here are the results: {json.dumps(execution_result, indent=2)}"
-        
-        return self.slave_agents["response_generation"].generate_response(
-            refined_query,
-            sparql_query,
-            execution_result
-        )
+    def get_conversation_history(self) -> List[Dict[str, Any]]:
+        """Get conversation history"""
+        return self.memory.chat_memory.messages

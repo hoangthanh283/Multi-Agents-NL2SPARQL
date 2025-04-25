@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-head
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray
+      component: head
+  template:
+    metadata:
+      labels:
+        app: ray
+        component: head
+    spec:
+      containers:
+      - name: ray-head
+        image: rayproject/ray:latest
+        command: ["ray", "start", "--head", "--port=6379", "--dashboard-host=0.0.0.0"]
+        ports:
+        - containerPort: 6379
+          name: gcs
+        - containerPort: 8265
+          name: dashboard
+        - containerPort: 10001
+          name: client
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+        - name: ray-temp
+          mountPath: /tmp/ray
+      volumes:
+      - name: ray-temp
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ray
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: ray
+        component: worker
+    spec:
+      containers:
+      - name: ray-worker
+        image: rayproject/ray:latest
+        command: ["ray", "start", "--address=ray-head:6379"]
+        resources:
+          requests:
+            cpu: "2"
+            memory: "4Gi"
+          limits:
+            cpu: "4"
+            memory: "8Gi"
+        volumeMounts:
+        - name: ray-temp
+          mountPath: /tmp/ray
+      volumes:
+      - name: ray-temp
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-head
+spec:
+  selector:
+    app: ray
+    component: head
+  ports:
+  - name: gcs
+    port: 6379
+    targetPort: 6379
+  - name: dashboard
+    port: 8265
+    targetPort: 8265
+  - name: client
+    port: 10001
+    targetPort: 10001
+  type: ClusterIP

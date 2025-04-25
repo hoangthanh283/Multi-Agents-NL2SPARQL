@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # API Service
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - GRAPHDB_URL=http://graphdb:7200/repositories/CHeVIE
+      - KAFKA_BROKERS=kafka:9092
+      - DASK_SCHEDULER=dask-scheduler:8786
+    depends_on:
+      - redis
+      - graphdb
+      - worker
+      - kafka
+      - dask-scheduler
+
+  # Celery Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - GRAPHDB_URL=http://graphdb:7200/repositories/CHeVIE
+      - KAFKA_BROKERS=kafka:9092
+      - DASK_SCHEDULER=dask-scheduler:8786
+    depends_on:
+      - redis
+      - graphdb
+      - kafka
+      - dask-scheduler
+
+  # Redis for caching and message broker
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-data:/data
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+
+  # GraphDB
+  graphdb:
+    image: ontotext/graphdb:10.0.0
+    ports:
+      - "7200:7200"
+    volumes:
+      - ./data/graphdb:/opt/graphdb/home
+      - ./data/ontologies:/root/ontologies
+      - ./config/graphdb/cluster-config.ttl:/opt/graphdb/conf/cluster-config.ttl
+
+  # Kong API Gateway
+  kong:
+    image: kong:latest
+    environment:
+      - KONG_DATABASE=off
+      - KONG_PROXY_ACCESS_LOG=/dev/stdout
+      - KONG_ADMIN_ACCESS_LOG=/dev/stdout
+      - KONG_PROXY_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_ERROR_LOG=/dev/stderr
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    volumes:
+      - ./config/kong:/usr/local/kong/declarative
+    depends_on:
+      - api
+
+  # Kafka and Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+
+  # Dask cluster
+  dask-scheduler:
+    image: daskdev/dask:latest
+    ports:
+      - "8786:8786"
+      - "8787:8787"
+    command: ["dask-scheduler"]
+
+  dask-worker:
+    image: daskdev/dask:latest
+    command: ["dask-worker", "tcp://dask-scheduler:8786"]
+    environment:
+      - DASK_SCHEDULER=dask-scheduler:8786
+    depends_on:
+      - dask-scheduler
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./k8s/prometheus-config.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+
+  # Grafana for monitoring
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./k8s/grafana-config.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - grafana-data:/var/lib/grafana
+
+  # Ray cluster
+  ray-head:
+    image: rayproject/ray:latest
+    ports:
+      - "6379:6379"   # GCS server
+      - "8265:8265"   # Dashboard
+      - "10001:10001" # Client
+    command: ray start --head --port=6379 --dashboard-host=0.0.0.0
+    environment:
+      - RAY_ADDRESS=ray-head:6379
+    volumes:
+      - ray-temp:/tmp/ray
+
+  ray-worker:
+    image: rayproject/ray:latest
+    command: ray start --address=ray-head:6379
+    environment:
+      - RAY_ADDRESS=ray-head:6379
+    depends_on:
+      - ray-head
+    volumes:
+      - ray-temp:/tmp/ray
+    deploy:
+      replicas: 3
+
+volumes:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+  prometheus-data:
+  grafana-data:
+  ray-temp:
