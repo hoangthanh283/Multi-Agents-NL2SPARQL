@@ -1,13 +1,16 @@
 import asyncio
 import logging
+import os
 import time
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import aiohttp
+import psutil
 from prometheus_client import Counter, Gauge, Histogram
 
 from config.logging_config import get_logger
+from slaves.slave_pool_manager import SlavePoolManager
 from utils.deployment_manager import deployment_manager
 
 logger = get_logger(__name__, 'health_checker')
@@ -19,7 +22,18 @@ HEALTH_CHECK_FAILURES = Counter('health_check_failures_total', 'Number of health
 
 class HealthChecker:
     def __init__(self, check_interval: int = 60):
+        """
+        Initialize the health checker
+        
+        Args:
+            check_interval: Interval in seconds between health checks
+        """
         self.check_interval = check_interval
+        self.system_metrics = {}
+        self.component_status = {}
+        self.last_check_time = None
+        self.is_running = False
+        self.slave_pool_manager = None  # Will be set during initialization
         self.health_endpoints = {
             'api': 'http://localhost:8000/health',
             'graphdb': 'http://localhost:7200/rest/health',
@@ -27,9 +41,15 @@ class HealthChecker:
             'kafka': 'http://localhost:9092',
             'ray-head': 'http://localhost:8265',
             'prometheus': 'http://localhost:9090/-/healthy',
-            'grafana': 'http://localhost:3000/api/health'
+            'grafana': 'http://localhost:3000/api/health',
+            'master-slave': 'http://localhost:8000/api/master/health'
         }
         self.running = False
+
+    def register_slave_pool_manager(self, manager: SlavePoolManager):
+        """Register the slave pool manager for health checks"""
+        self.slave_pool_manager = manager
+        logger.info("Registered slave pool manager with health checker")
 
     async def start_monitoring(self):
         """Start health monitoring for all services"""
@@ -77,6 +97,9 @@ class HealthChecker:
             elif service == 'kafka':
                 # Special handling for Kafka
                 return await self.check_kafka_health()
+            elif service == 'master-slave':
+                # Special handling for master-slave architecture
+                return await self.check_master_slave_health()
             else:
                 # HTTP health check
                 async with session.get(endpoint) as response:
@@ -149,6 +172,106 @@ class HealthChecker:
         except Exception as e:
             HEALTH_CHECK_FAILURES.labels(service='kafka').inc()
             raise
+
+    async def check_master_slave_health(self) -> Dict:
+        """Check health of master-slave architecture components"""
+        result = {
+            "status": "healthy",
+            "message": "Master-slave architecture operational",
+            "master": {},
+            "slave_pools": {}
+        }
+        
+        # Check if slave pool manager is registered
+        if not self.slave_pool_manager:
+            result["status"] = "warning"
+            result["message"] = "Slave pool manager not registered"
+            return result
+        
+        # Check master health
+        try:
+            master_health = await self._get_master_health()
+            result["master"] = master_health
+            
+            if master_health.get("status") != "healthy":
+                result["status"] = "warning"
+                result["message"] = f"Master health issues: {master_health.get('message')}"
+        except Exception as e:
+            logger.error(f"Error checking master health: {str(e)}")
+            result["master"] = {"status": "critical", "message": f"Error: {str(e)}"}
+            result["status"] = "critical"
+            result["message"] = f"Master health check failed: {str(e)}"
+        
+        # Check slave pools health
+        try:
+            slave_pools_health = await self._get_slave_pools_health()
+            result["slave_pools"] = slave_pools_health
+            
+            # Check if any slave pool is critical
+            if any(pool.get("status") == "critical" for pool in slave_pools_health.values()):
+                result["status"] = "critical"
+                result["message"] = "One or more slave pools are in critical state"
+            # Check if any slave pool is warning
+            elif any(pool.get("status") == "warning" for pool in slave_pools_health.values()) and result["status"] != "critical":
+                result["status"] = "warning"
+                result["message"] = "One or more slave pools have warnings"
+        except Exception as e:
+            logger.error(f"Error checking slave pools health: {str(e)}")
+            result["slave_pools"] = {"status": "critical", "message": f"Error: {str(e)}"}
+            result["status"] = "critical"
+            result["message"] = f"Slave pools health check failed: {str(e)}"
+            
+        return result
+    
+    async def _get_master_health(self) -> Dict:
+        """Get health status of the master component"""
+        # This would be implemented to check actual master health
+        # For now, we'll return a placeholder healthy status
+        return {
+            "status": "healthy",
+            "message": "Master operational",
+            "load": 0.4,  # Example load factor
+            "uptime": 3600  # Example uptime in seconds
+        }
+    
+    async def _get_slave_pools_health(self) -> Dict:
+        """Get health status of all slave pools"""
+        if not self.slave_pool_manager:
+            return {"status": "critical", "message": "Slave pool manager not available"}
+            
+        slave_pools_health = {}
+        
+        # Get health status for each slave pool
+        for domain, pool in self.slave_pool_manager.slave_pools.items():
+            try:
+                metrics = await pool.get_metrics()
+                status = "healthy"
+                message = "Slave pool operational"
+                
+                # Determine status based on metrics
+                if metrics.get("active_slaves", 0) == 0:
+                    status = "critical"
+                    message = "No active slaves in pool"
+                elif metrics.get("success_rate", 1.0) < 0.8:
+                    status = "warning"
+                    message = "Low success rate"
+                elif metrics.get("load_factor", 0.0) > 0.9:
+                    status = "warning"
+                    message = "High load factor"
+                
+                slave_pools_health[domain] = {
+                    "status": status,
+                    "message": message,
+                    "metrics": metrics
+                }
+            except Exception as e:
+                logger.error(f"Error getting metrics for slave pool {domain}: {str(e)}")
+                slave_pools_health[domain] = {
+                    "status": "critical",
+                    "message": f"Error: {str(e)}"
+                }
+                
+        return slave_pools_health
 
     async def handle_service_failure(self, service: str):
         """Handle service failure"""

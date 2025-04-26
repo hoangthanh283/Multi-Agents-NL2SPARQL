@@ -1,11 +1,11 @@
 import json
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from master.base import DomainMaster
+from adapters.agent_adapter import AgentAdapter
 from agents.query_execution import QueryExecutionAgent
 from agents.response_generation import ResponseGenerationAgent
-from adapters.agent_adapter import AgentAdapter
+from master.base import DomainMaster
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)

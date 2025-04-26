@@ -184,3 +184,42 @@ def circuit_breaker(name: str, **cb_kwargs):
 graphdb_circuit = CircuitBreaker('graphdb', failure_threshold=3, recovery_timeout=30)
 redis_circuit = CircuitBreaker('redis', failure_threshold=3, recovery_timeout=30)
 ray_circuit = CircuitBreaker('ray', failure_threshold=3, recovery_timeout=30)
+
+class MasterSlaveCircuitBreaker:
+    """Circuit breaker manager for master-slave architecture"""
+    
+    def __init__(self):
+        self.master_circuit = CircuitBreaker(name="global_master")
+        self.slave_pool_circuits = {}  # domain -> CircuitBreaker
+    
+    def register_slave_pool(self, domain: str):
+        """Register a new slave pool domain with a circuit breaker"""
+        if domain not in self.slave_pool_circuits:
+            self.slave_pool_circuits[domain] = CircuitBreaker(name=f"slave_pool_{domain}")
+            logger.info(f"Registered new circuit breaker for slave pool: {domain}")
+    
+    async def execute_master(self, func: Callable, *args, **kwargs) -> Any:
+        """Execute a function with the master circuit breaker"""
+        return await self.master_circuit.execute(func, *args, **kwargs)
+    
+    async def execute_slave_pool(self, domain: str, func: Callable, *args, **kwargs) -> Any:
+        """Execute a function with a specific slave pool circuit breaker"""
+        if domain not in self.slave_pool_circuits:
+            self.register_slave_pool(domain)
+            
+        return await self.slave_pool_circuits[domain].execute(func, *args, **kwargs)
+    
+    def get_status(self) -> Dict:
+        """Get status of all circuit breakers"""
+        status = {
+            "master": self.master_circuit.get_status(),
+            "slave_pools": {
+                domain: circuit.get_status()
+                for domain, circuit in self.slave_pool_circuits.items()
+            }
+        }
+        return status
+
+
+# Initialize the circuit breaker for master-slave architecture
+ms_circuit_breaker = MasterSlaveCircuitBreaker()

@@ -2,15 +2,17 @@ import json
 import threading
 import time
 import uuid
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 import redis
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 from master.nlp_master import NLPDomainMaster
 from master.query_master import QueryDomainMaster
 from master.response_master import ResponseDomainMaster
 from utils.logging_utils import setup_logging
+from utils.monitoring import (log_domain_processing, log_workflow_completion,
+                              log_workflow_start, metrics_logger)
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
@@ -53,6 +55,7 @@ class GlobalMaster:
         # Thread control
         self.running = False
         self.completion_listener_thread = None
+        self.domain_transition_thread = None
         
         # Prometheus metrics
         self.request_counter = Counter(
@@ -81,12 +84,12 @@ class GlobalMaster:
             master.start()
             logger.info(f"Started {domain} domain master")
         
-        # Subscribe to completion channel
-        self.pubsub.subscribe("global:completions")
+        # Subscribe to completion channel and domain transition channel
+        self.pubsub.subscribe("global:completions", "global:domain_transitions")
         
         # Start completion listener thread
         self.running = True
-        self.completion_listener_thread = threading.Thread(target=self._listen_for_completions)
+        self.completion_listener_thread = threading.Thread(target=self._listen_for_messages)
         self.completion_listener_thread.daemon = True
         self.completion_listener_thread.start()
         
@@ -132,9 +135,9 @@ class GlobalMaster:
                 "context": context or []
             },
             "steps": [
-                {"domain": "nlp", "status": "pending"},
-                {"domain": "query", "status": "pending"},
-                {"domain": "response", "status": "pending"}
+                {"domain": "nlp", "status": "pending", "start_time": None, "end_time": None},
+                {"domain": "query", "status": "pending", "start_time": None, "end_time": None},
+                {"domain": "response", "status": "pending", "start_time": None, "end_time": None}
             ],
             "current_domain": "nlp"
         }
@@ -153,6 +156,9 @@ class GlobalMaster:
         # Update metrics
         self.request_counter.labels(status="created").inc()
         self.active_workflows_gauge.inc()
+        
+        # Log workflow creation
+        log_workflow_start(request_id, query)
         
         logger.info(f"Created workflow {request_id} for query: {query}")
         return request_id
@@ -178,6 +184,16 @@ class GlobalMaster:
         # Update status
         if request_id in self.active_workflows:
             self.active_workflows[request_id]["status"] = "processing"
+        
+        # Update current step status and record start time
+        for step in workflow["steps"]:
+            if step["domain"] == "nlp":
+                step["status"] = "processing"
+                step["start_time"] = time.time()
+                break
+        
+        # Update workflow in Redis
+        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)
         
         # Send to NLP domain (always starts there)
         self.redis.publish("domain:nlp:requests", json.dumps(workflow))
@@ -227,6 +243,11 @@ class GlobalMaster:
         
         # Add domain steps status
         status_info["steps"] = workflow.get("steps", [])
+        
+        # Get metrics for this workflow
+        workflow_metrics = metrics_logger.get_workflow_metrics(request_id)
+        if workflow_metrics:
+            status_info["metrics"] = workflow_metrics
         
         return status_info
     
@@ -281,10 +302,23 @@ class GlobalMaster:
         if sparql_query:
             result["sparql_query"] = sparql_query
         
+        # Include domain processing times
+        domain_times = {}
+        for step in workflow.get("steps", []):
+            domain = step.get("domain")
+            start_time = step.get("start_time")
+            end_time = step.get("end_time")
+            
+            if domain and start_time and end_time:
+                domain_times[domain] = end_time - start_time
+                
+        if domain_times:
+            result["domain_processing_times"] = domain_times
+            
         return result
     
-    def _listen_for_completions(self):
-        """Listen for workflow completions."""
+    def _listen_for_messages(self):
+        """Listen for workflow completions and domain transitions."""
         while self.running:
             message = self.pubsub.get_message()
             if message and message["type"] == "message":
@@ -293,13 +327,15 @@ class GlobalMaster:
                     if isinstance(channel, bytes):
                         channel = channel.decode('utf-8')
                     
-                    # Process only messages from completion channel
                     if channel == "global:completions":
                         workflow = json.loads(message["data"])
                         self._handle_workflow_completion(workflow)
+                    elif channel == "global:domain_transitions":
+                        transition_data = json.loads(message["data"])
+                        self._handle_domain_transition(transition_data)
                         
                 except Exception as e:
-                    logger.error(f"Error processing completion: {e}")
+                    logger.error(f"Error processing message: {e}")
             
             # Small sleep to prevent CPU spinning
             time.sleep(0.01)
@@ -321,6 +357,12 @@ class GlobalMaster:
         # Add completion timestamp if not already present
         if "completed_at" not in workflow:
             workflow["completed_at"] = completed_at
+            
+        # Update the final step's end time
+        for step in workflow.get("steps", []):
+            if step["domain"] == "response":
+                step["status"] = "completed"
+                step["end_time"] = completed_at
         
         # Update workflow in Redis
         workflow_key = f"workflow:{request_id}"
@@ -331,12 +373,68 @@ class GlobalMaster:
         status = "error" if "error" in workflow else "completed"
         self.request_counter.labels(status=status).inc()
         
+        # Log workflow completion
+        success = "error" not in workflow
+        log_workflow_completion(request_id, success, processing_time)
+        
         if request_id in self.active_workflows:
             # Remove from active workflows
             del self.active_workflows[request_id]
             self.active_workflows_gauge.dec()
         
         logger.info(f"Workflow {request_id} completed in {processing_time:.2f}s with status: {status}")
+    
+    def _handle_domain_transition(self, transition_data: Dict[str, Any]):
+        """
+        Handle a domain transition.
+        
+        Args:
+            transition_data: Data about the domain transition
+        """
+        request_id = transition_data.get("request_id")
+        from_domain = transition_data.get("from_domain")
+        to_domain = transition_data.get("to_domain")
+        
+        if not all([request_id, from_domain, to_domain]):
+            logger.error(f"Invalid domain transition data: {transition_data}")
+            return
+            
+        # Get workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        workflow_json = self.redis.get(workflow_key)
+        
+        if not workflow_json:
+            logger.error(f"Workflow {request_id} not found during domain transition")
+            return
+            
+        # Parse workflow
+        workflow = json.loads(workflow_json)
+        
+        # Record transition time
+        transition_time = time.time()
+        
+        # Update step status for the domain we're leaving
+        for step in workflow.get("steps", []):
+            if step["domain"] == from_domain:
+                step["status"] = "completed"
+                step["end_time"] = transition_time
+                
+                # Calculate domain processing time
+                if step["start_time"]:
+                    domain_time = transition_time - step["start_time"]
+                    log_domain_processing(request_id, from_domain, domain_time)
+                    
+            elif step["domain"] == to_domain:
+                step["status"] = "processing"
+                step["start_time"] = transition_time
+                
+        # Update current domain
+        workflow["current_domain"] = to_domain
+        
+        # Update workflow in Redis
+        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)
+        
+        logger.info(f"Workflow {request_id} transitioned from {from_domain} to {to_domain}")
     
     def get_health(self) -> Dict[str, Any]:
         """
@@ -350,8 +448,15 @@ class GlobalMaster:
         for domain, master in self.domain_masters.items():
             domain_health[domain] = master.get_health()
         
+        # Determine overall health
+        all_domains_healthy = all(
+            health.get("status") == "healthy" 
+            for health in domain_health.values()
+        )
+        
         return {
-            "status": "healthy" if self.running else "stopped",
+            "status": "healthy" if (self.running and all_domains_healthy) else "unhealthy",
+            "active": self.running,
             "active_workflows": len(self.active_workflows),
             "domain_masters": domain_health
         }

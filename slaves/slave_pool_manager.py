@@ -1,10 +1,12 @@
-import threading
 import json
-from typing import Dict, Any, List, Optional
+import threading
+from typing import Any, Dict, List, Optional
+
+from prometheus_client import Gauge
 
 from slaves.slave_pool import SlavePool
 from utils.logging_utils import setup_logging
-from prometheus_client import Gauge
+from utils.monitoring import log_slave_pool_size
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
@@ -85,6 +87,21 @@ class SlavePoolManager:
             'Number of active slave pools',
             ['domain']
         )
+        self.pool_size = Gauge(
+            'slave_pool_current_size',
+            'Current number of slaves in a pool',
+            ['domain', 'slave_type']
+        )
+        self.pool_capacity = Gauge(
+            'slave_pool_capacity',
+            'Maximum capacity of a slave pool',
+            ['domain', 'slave_type']
+        )
+        
+        # Initialize metrics for each domain
+        for domain in self.pools:
+            self.total_pools.labels(domain=domain).set(0)
+            self.active_pools.labels(domain=domain).set(0)
         
         logger.info("SlavePoolManager initialized")
     
@@ -123,6 +140,38 @@ class SlavePoolManager:
             
         self.running = True
         logger.info(f"Started slave pools for domains: {', '.join(domains)}")
+        
+        # Start monitoring thread for pool metrics
+        self.monitoring_thread = threading.Thread(target=self._monitor_pools, daemon=True)
+        self.monitoring_thread.start()
+    
+    def _monitor_pools(self):
+        """Monitor pool metrics in a background thread"""
+        while self.running:
+            self._update_pool_metrics()
+            # Sleep for 5 seconds between updates
+            threading.Event().wait(5)
+            
+    def _update_pool_metrics(self):
+        """Update metrics for all pools"""
+        try:
+            for domain in self.pools:
+                for slave_type, pool in self.pools[domain].items():
+                    try:
+                        status = pool.get_status()
+                        current_size = status.get("current_size", 0)
+                        max_size = status.get("max_size", 0)
+                        
+                        # Update Prometheus metrics
+                        self.pool_size.labels(domain=domain, slave_type=slave_type).set(current_size)
+                        self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(max_size)
+                        
+                        # Log to monitoring system
+                        log_slave_pool_size(domain, slave_type, current_size)
+                    except Exception as e:
+                        logger.error(f"Error updating metrics for {domain}/{slave_type}: {e}")
+        except Exception as e:
+            logger.error(f"Error in pool metrics monitoring: {e}")
     
     def _start_slave_pool(self, domain: str, slave_type: str, class_path: str):
         """
@@ -165,6 +214,13 @@ class SlavePoolManager:
                 self.pools[domain][slave_type] = pool
                 self.active_pools.labels(domain=domain).inc()
                 
+                # Set initial metrics
+                self.pool_size.labels(domain=domain, slave_type=slave_type).set(initial_size)
+                self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(max_size)
+                
+                # Log to monitoring system
+                log_slave_pool_size(domain, slave_type, initial_size)
+                
                 logger.info(f"Started slave pool for {domain}/{slave_type}")
                 
             except Exception as e:
@@ -175,23 +231,33 @@ class SlavePoolManager:
         if not self.running:
             return
             
+        self.running = False  # Signal monitoring thread to stop
+        
         with self.pool_lock:
             for domain in self.pools:
                 for slave_type, pool in self.pools[domain].items():
                     try:
                         pool.stop()
+                        
+                        # Reset metrics
+                        self.pool_size.labels(domain=domain, slave_type=slave_type).set(0)
+                        self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(0)
+                        
                         logger.info(f"Stopped slave pool for {domain}/{slave_type}")
                     except Exception as e:
                         logger.error(f"Error stopping slave pool for {domain}/{slave_type}: {e}")
                         
-                # Reset metrics
+                # Reset domain metrics
                 self.active_pools.labels(domain=domain).set(0)
                 
             # Clear pools
             for domain in self.pools:
                 self.pools[domain].clear()
                 
-        self.running = False
+        # Wait for monitoring thread to finish
+        if hasattr(self, 'monitoring_thread') and self.monitoring_thread.is_alive():
+            self.monitoring_thread.join(timeout=2.0)
+            
         logger.info("Stopped all slave pools")
     
     def stop_domain_pools(self, domain: str):
@@ -209,6 +275,11 @@ class SlavePoolManager:
             for slave_type, pool in self.pools[domain].items():
                 try:
                     pool.stop()
+                    
+                    # Reset metrics
+                    self.pool_size.labels(domain=domain, slave_type=slave_type).set(0)
+                    self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(0)
+                    
                     logger.info(f"Stopped slave pool for {domain}/{slave_type}")
                 except Exception as e:
                     logger.error(f"Error stopping slave pool for {domain}/{slave_type}: {e}")
@@ -271,7 +342,7 @@ class SlavePoolManager:
         for domain in self.pools:
             # Domain is healthy if at least one pool is healthy
             domain_healthy = False
-            for pool in self.pools[domain].values():
+            for slave_type, pool in self.pools[domain].values():
                 try:
                     if pool.get_health():
                         domain_healthy = True
@@ -282,3 +353,29 @@ class SlavePoolManager:
             health[domain] = domain_healthy
             
         return health
+        
+    def scale_pool(self, domain: str, slave_type: str, target_size: int) -> bool:
+        """
+        Scale a slave pool to a target size.
+        
+        Args:
+            domain: Domain name
+            slave_type: Type of slave
+            target_size: Target number of slaves in pool
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        pool = self.get_pool(domain, slave_type)
+        if not pool:
+            logger.error(f"No pool found for {domain}/{slave_type}")
+            return False
+            
+        success = pool.scale(target_size)
+        
+        if success:
+            # Update metrics
+            self.pool_size.labels(domain=domain, slave_type=slave_type).set(target_size)
+            log_slave_pool_size(domain, slave_type, target_size)
+            
+        return success

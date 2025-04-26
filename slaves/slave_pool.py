@@ -1,17 +1,17 @@
 import importlib
-import threading
-import time
 import json
 import random
-from typing import Dict, Any, List, Optional, Type
+import threading
+import time
+from typing import Any, Dict, List, Optional, Type
 
 import redis
 from prometheus_client import Counter, Gauge
 
 from slaves.base import AbstractSlave
-from utils.logging_utils import setup_logging
-from utils.load_balancer import LoadBalancer
 from utils.health_checker import HealthChecker
+from utils.load_balancer import LoadBalancer
+from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 

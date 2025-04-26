@@ -1,10 +1,10 @@
 import json
 import threading
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 import redis
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 from utils.logging_utils import setup_logging
 

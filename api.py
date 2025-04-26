@@ -2,20 +2,22 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import redis
 import uvicorn
 from celery.result import AsyncResult
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
+from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Gauge, Histogram,
                                generate_latest)
 from pydantic import BaseModel
 from rdflib import Graph
 from starlette.responses import Response
 
 from database.ontology_store import OntologyStore
+from master.global_master import GlobalMaster
+from slaves.slave_pool_manager import SlavePoolManager
 from tasks import (execute_sparql, get_ontology_summary, search_classes,
                    search_instances, search_properties)
 from utils.monitoring import (health_check, metrics_logger, start_monitoring,
@@ -25,6 +27,12 @@ from utils.rate_limiter import circuit_break, rate_limit
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# System metrics
+CPU_USAGE = Gauge('system_cpu_usage', 'System CPU usage percentage')
+MEMORY_USAGE = Gauge('system_memory_usage_bytes', 'System memory usage in bytes')
+DISK_USAGE = Gauge('system_disk_usage_bytes', 'System disk usage in bytes')
+NETWORK_IO = Counter('system_network_io_bytes', 'System network IO in bytes', ['direction'])
 
 # Define Prometheus metrics
 REQUEST_COUNT = Counter(
@@ -58,17 +66,33 @@ app.add_middleware(
 )
 
 # Initialize Redis client
-redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = redis.from_url(redis_url)
 
 # Initialize thread pool
 executor = ThreadPoolExecutor(max_workers=10)
 
 # Initialize OntologyStore
 ontology_store = OntologyStore(
-    endpoint_url="http://localhost:7200/repositories/CHeVIE",
-    redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+    endpoint_url=os.getenv("GRAPHDB_URL", "http://localhost:7200/repositories/CHeVIE"),
+    redis_url=redis_url,
     max_workers=10
 )
+
+# Initialize Global Master and Slave Pool Manager
+global_master = GlobalMaster(redis_url=redis_url, endpoint_url=os.getenv("GRAPHDB_URL", "http://localhost:7200/repositories/CHeVIE"))
+slave_pool_manager = None  # Will be initialized in startup event
+
+# Configure slave pool settings
+slave_pool_configs = {
+    "nlp.query_refinement": {"initial_size": 2, "max_size": 5},
+    "nlp.entity_recognition": {"initial_size": 2, "max_size": 5},
+    "query.ontology_mapping": {"initial_size": 2, "max_size": 5},
+    "query.sparql_construction": {"initial_size": 2, "max_size": 5},
+    "query.validation": {"initial_size": 1, "max_size": 3},
+    "response.query_execution": {"initial_size": 2, "max_size": 5, "slave_config": {"endpoint_url": os.getenv("GRAPHDB_URL", "http://localhost:7200/repositories/CHeVIE")}},
+    "response.response_generation": {"initial_size": 2, "max_size": 5},
+}
 
 @app.middleware("http")
 async def add_metrics(request: Request, call_next):
@@ -103,32 +127,48 @@ class SearchQuery(BaseModel):
     limit: Optional[int] = 10
     threshold: Optional[float] = 0.5
 
+class NLQuery(BaseModel):
+    query: str
+    context: Optional[List[str]] = None
+
 class TaskResponse(BaseModel):
     task_id: str
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
+    global slave_pool_manager
     try:
+        # Initialize the slave pool manager with the configured pools
+        slave_pool_manager = SlavePoolManager(
+            redis_url=redis_url,
+            slave_pool_configs=slave_pool_configs
+        )
+        
+        # Start the slave pools
+        await slave_pool_manager.start_all_pools()
+        
         # Start system monitoring
         start_monitoring()
         
-        # Register health checks
-        health_check.register_service("redis", check_redis_health)
-        health_check.register_service("graphdb", check_graphdb_health)
-        health_check.register_service("celery", check_celery_health)
-        
-        # Load ontology
-        success = ontology_store.load_ontology()
-        if not success:
-            logger.error("Failed to load ontology")
+        logger.info("API startup completed successfully")
     except Exception as e:
-        logger.error(f"Error during startup: {e}")
+        logger.error(f"Error during API startup: {str(e)}")
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    stop_monitoring()
+    try:
+        # Stop global master and slave pools
+        global_master.stop()
+        if slave_pool_manager:
+            slave_pool_manager.stop_all_pools()
+            
+        stop_monitoring()
+        logger.info("Master-Slave architecture stopped")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 # Health check implementations
 async def check_redis_health():
@@ -154,6 +194,23 @@ async def check_celery_health():
     except Exception as e:
         raise Exception(f"Celery health check failed: {e}")
 
+async def check_master_slave_health():
+    try:
+        # Check global master health
+        master_health = global_master.get_health()
+        
+        # Check slave pools health
+        if slave_pool_manager:
+            pools_health = slave_pool_manager.get_health()
+            
+            # Check if at least one pool is healthy in each domain
+            domains_health = all(health for domain, health in pools_health.items())
+            
+            if not master_health.get("status") == "healthy" or not domains_health:
+                raise Exception("Some master or slave components are unhealthy")
+    except Exception as e:
+        raise Exception(f"Master-Slave health check failed: {e}")
+
 @app.get("/health")
 async def health():
     """Health check endpoint"""
@@ -163,6 +220,112 @@ async def health():
         "status": "healthy" if is_healthy else "unhealthy",
         "services": results
     }
+
+# New endpoints for NL2SPARQL using the master-slave architecture
+
+@app.post("/api/nl2sparql", response_model=TaskResponse)
+@rate_limit(redis_client, lambda q: "nl2sparql", max_requests=50, time_window=60)
+@circuit_break(redis_client, "nl2sparql", failure_threshold=5)
+async def nl_to_sparql(query: NLQuery):
+    """Process natural language query using the master-slave architecture"""
+    try:
+        # Create a workflow using the global master
+        request_id = global_master.create_workflow(query.query, query.context)
+        
+        # Start the workflow asynchronously
+        global_master.start_workflow(request_id)
+        
+        return {"task_id": request_id}
+    except Exception as e:
+        logger.error(f"Error in nl_to_sparql: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/nl2sparql/{workflow_id}/status")
+async def get_workflow_status(workflow_id: str):
+    """Get the current status of an NL2SPARQL workflow"""
+    try:
+        # Get status from global master
+        status = global_master.get_workflow_status(workflow_id)
+        if not status:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+            
+        return status
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_workflow_status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/nl2sparql/{workflow_id}/result")
+async def get_workflow_result(workflow_id: str):
+    """Get the result of a completed NL2SPARQL workflow"""
+    try:
+        # Get result from global master
+        result = global_master.get_workflow_result(workflow_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Workflow result not found")
+            
+        if not result.get("completed", False):
+            return {
+                "status": "pending",
+                "message": "Workflow is still processing"
+            }
+            
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_workflow_result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/master/health")
+async def master_health():
+    """Get health status of the master-slave architecture components"""
+    try:
+        # Get master health
+        master_health = global_master.get_health()
+        
+        # Get slave pools health if available
+        pools_health = {}
+        if slave_pool_manager:
+            pools_health = slave_pool_manager.get_health()
+            
+        return {
+            "global_master": master_health,
+            "slave_pools": pools_health
+        }
+    except Exception as e:
+        logger.error(f"Error in master_health: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/master/status")
+async def master_status():
+    """Get detailed status of master-slave architecture components"""
+    try:
+        # Get domain masters status
+        domain_masters_status = {}
+        for domain, master in global_master.domain_masters.items():
+            domain_masters_status[domain] = master.get_status()
+        
+        # Get active workflows
+        active_workflows = len(global_master.active_workflows)
+        
+        # Get slave pools status if available
+        pools_status = {}
+        if slave_pool_manager:
+            pools_status = slave_pool_manager.get_status()
+            
+        return {
+            "global_master": {
+                "active": global_master.running,
+                "active_workflows": active_workflows
+            },
+            "domain_masters": domain_masters_status,
+            "slave_pools": pools_status
+        }
+    except Exception as e:
+        logger.error(f"Error in master_status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/sparql", response_model=TaskResponse)
 @rate_limit(redis_client, lambda q: "sparql", max_requests=100, time_window=60)

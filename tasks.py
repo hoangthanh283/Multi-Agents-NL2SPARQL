@@ -4,6 +4,14 @@ import os
 from celery import Celery
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
+from adapters.agent_adapter import AgentAdapter
+from agents.entity_recognition import EntityRecognitionAgent
+from agents.ontology_mapping import OntologyMappingAgent
+from agents.query_execution import QueryExecutionAgent
+from agents.query_refinement import QueryRefinementAgent
+from agents.response_generation import ResponseGenerationAgent
+from agents.sparql_construction import SparqlConstructionAgent
+from agents.sparql_validation import SparqlValidationAgent
 from database.ontology_store import OntologyStore
 
 # Configure logging
@@ -133,3 +141,47 @@ celery_app.conf.beat_schedule = {
         'schedule': 60.0,  # Run every minute
     },
 }
+
+# --- Master-Slave Workflow Agent Tasks ---
+
+@celery_app.task(name='nlp.query_refinement')
+def nlp_query_refinement(parameters):
+    """Refine a query using the query refinement agent"""
+    adapter = AgentAdapter(QueryRefinementAgent(), "query_refinement")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='nlp.entity_recognition')
+def nlp_entity_recognition(parameters):
+    """Recognize entities in a query"""
+    adapter = AgentAdapter(EntityRecognitionAgent(), "entity_recognition")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='query.ontology_mapping')
+def query_ontology_mapping(parameters):
+    """Map entities to ontology using the ontology mapping agent"""
+    adapter = AgentAdapter(OntologyMappingAgent(ontology_store=ontology_store), "ontology_mapping")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='query.sparql_construction')
+def query_sparql_construction(parameters):
+    """Construct SPARQL query using the sparql construction agent"""
+    adapter = AgentAdapter(SparqlConstructionAgent(), "sparql_construction")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='query.validation')
+def query_validation(parameters):
+    """Validate SPARQL query using the sparql validation agent"""
+    adapter = AgentAdapter(SparqlValidationAgent(), "validation")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='response.query_execution')
+def response_query_execution(parameters):
+    """Execute SPARQL query using the query execution agent"""
+    adapter = AgentAdapter(QueryExecutionAgent(), "query_execution")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='response.response_generation')
+def response_response_generation(parameters):
+    """Generate response using the response generation agent"""
+    adapter = AgentAdapter(ResponseGenerationAgent(), "response_generation")
+    return adapter.execute_task(parameters)

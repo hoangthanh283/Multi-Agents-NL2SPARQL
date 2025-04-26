@@ -1,12 +1,13 @@
-from typing import Dict, Any
 import time
+from typing import Any, Dict
 
-from slaves.base import AbstractSlave
-from agents.ontology_mapping import OntologyMappingAgent
-from adapters.agent_adapter import AgentAdapter
-from database.ontology_store import OntologyStore
-from utils.logging_utils import setup_logging
 from prometheus_client import Counter, Histogram
+
+from adapters.agent_adapter import AgentAdapter
+from agents.ontology_mapping import OntologyMappingAgent
+from database.ontology_store import OntologyStore
+from slaves.base import AbstractSlave
+from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 

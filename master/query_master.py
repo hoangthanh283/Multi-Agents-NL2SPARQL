@@ -1,14 +1,14 @@
 import json
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from master.base import DomainMaster
-from agents.ontology_mapping import OntologyMappingAgent
-from agents.sparql_construction import SparqlConstructionAgent
-from agents.sparql_validation import SparqlValidationAgent
 from adapters.agent_adapter import AgentAdapter
-from utils.logging_utils import setup_logging
+from agents.ontology_mapping import OntologyMappingAgent
+from agents.sparql_construction import SPARQLConstructionAgent
+from agents.sparql_validation import SPARQLValidationAgent
 from database.ontology_store import OntologyStore
+from master.base import DomainMaster
+from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
@@ -52,14 +52,14 @@ class QueryDomainMaster(DomainMaster):
             
             # SPARQL construction agent
             self.sparql_construction = AgentAdapter(
-                agent_instance=SparqlConstructionAgent(),
+                agent_instance=SPARQLConstructionAgent(),
                 agent_type="sparql_construction"
             )
             logger.info("SPARQL construction agent initialized")
             
             # SPARQL validation agent
             self.sparql_validation = AgentAdapter(
-                agent_instance=SparqlValidationAgent(),
+                agent_instance=SPARQLValidationAgent(),
                 agent_type="validation"
             )
             logger.info("SPARQL validation agent initialized")

@@ -1,10 +1,11 @@
-from typing import Dict, Any
-import time
 import importlib
+import time
+from typing import Any, Dict
+
+from prometheus_client import Counter, Histogram
 
 from slaves.base import AbstractSlave
 from utils.logging_utils import setup_logging
-from prometheus_client import Counter, Histogram
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 

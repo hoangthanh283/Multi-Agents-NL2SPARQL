@@ -1,6 +1,8 @@
-from typing import Dict, Any, Callable
 import time
+from typing import Any, Callable, Dict
+
 from prometheus_client import Counter, Histogram
+
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)

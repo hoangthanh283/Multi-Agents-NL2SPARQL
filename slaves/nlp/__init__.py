@@ -6,8 +6,8 @@ This package contains slave implementations for the NLP domain:
 - entity_recognition_slave: For recognizing entities in natural language
 """
 
-from slaves.nlp.query_refinement_slave import QueryRefinementSlave
 from slaves.nlp.entity_recognition_slave import EntityRecognitionSlave
+from slaves.nlp.query_refinement_slave import QueryRefinementSlave
 
 __all__ = [
     "QueryRefinementSlave",
