@@ -1,8 +1,9 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import time
 
 from slaves.base import AbstractSlave
 from agents.query_refinement import QueryRefinementAgent
+from adapters.agent_adapter import AgentAdapter
 from utils.logging_utils import setup_logging
 from prometheus_client import Counter, Histogram
 
@@ -11,7 +12,7 @@ logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 class QueryRefinementSlave(AbstractSlave):
     """
     Slave responsible for refining natural language queries.
-    Wraps the existing QueryRefinementAgent to adapt it to the slave interface.
+    Wraps the existing QueryRefinementAgent through an adapter.
     """
     
     def __init__(self, config: Dict[str, Any] = None):
@@ -19,12 +20,23 @@ class QueryRefinementSlave(AbstractSlave):
         Initialize the query refinement slave.
         
         Args:
-            config: Configuration dictionary (optional)
+            config: Configuration dictionary
         """
         self.config = config or {}
         
-        # Initialize the existing agent
-        self.agent = QueryRefinementAgent()
+        try:
+            # Initialize the query refinement agent
+            agent = QueryRefinementAgent()
+            
+            # Wrap the agent with an adapter
+            self.agent_adapter = AgentAdapter(
+                agent_instance=agent,
+                agent_type="query_refinement"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error initializing QueryRefinementSlave: {e}")
+            self.agent_adapter = None
         
         # Metrics
         self.task_counter = Counter(
@@ -68,10 +80,29 @@ class QueryRefinementSlave(AbstractSlave):
                     "error": "Missing query parameter"
                 }
             
-            # Execute query refinement using the agent
-            refined_query = self.agent.refine_query(query, context)
+            # Check if agent adapter is initialized
+            if not self.agent_adapter:
+                self.task_counter.labels(status="error").inc()
+                self.failed_tasks += 1
+                return {
+                    "success": False,
+                    "error": "Query refinement agent adapter not initialized properly"
+                }
             
-            # Update metrics and stats
+            # Execute query refinement using the agent adapter
+            result = self.agent_adapter.execute_task({
+                "query": query,
+                "context": context
+            })
+            
+            if not result.get("success", False):
+                self.task_counter.labels(status="error").inc()
+                self.failed_tasks += 1
+                return result
+                
+            refined_query = result.get("result", {}).get("refined_query", query)
+            
+            # Update metrics
             self.task_counter.labels(status="success").inc()
             self.total_processed += 1
             self.successful_tasks += 1
@@ -81,7 +112,7 @@ class QueryRefinementSlave(AbstractSlave):
                 "refined_query": refined_query
             }
         except Exception as e:
-            # Update error metrics and stats
+            # Update error metrics
             self.task_counter.labels(status="error").inc()
             self.failed_tasks += 1
             
@@ -103,14 +134,18 @@ class QueryRefinementSlave(AbstractSlave):
         """
         uptime = time.time() - self.start_time
         
+        # Include adapter status if available
+        adapter_status = self.agent_adapter.get_status() if self.agent_adapter else {"status": "unavailable"}
+        
         return {
             "type": "query_refinement",
-            "status": "active",
+            "status": "active" if self.agent_adapter else "degraded",
             "uptime_seconds": uptime,
             "total_processed": self.total_processed,
             "successful_tasks": self.successful_tasks,
             "failed_tasks": self.failed_tasks,
-            "success_rate": self.successful_tasks / max(1, self.total_processed) * 100
+            "success_rate": self.successful_tasks / max(1, self.total_processed) * 100,
+            "adapter": adapter_status
         }
     
     def get_health(self) -> bool:
@@ -120,4 +155,7 @@ class QueryRefinementSlave(AbstractSlave):
         Returns:
             Boolean indicating health status
         """
-        return hasattr(self, 'agent') and hasattr(self.agent, 'refine_query')
+        return (
+            self.agent_adapter is not None and 
+            self.agent_adapter.is_healthy()
+        )

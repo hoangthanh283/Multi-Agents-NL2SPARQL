@@ -1,16 +1,23 @@
-import uuid
 import json
+import time
 from typing import Dict, Any
 
 from master.base import DomainMaster
+from agents.entity_recognition import EntityRecognitionAgent
+from agents.query_refinement import QueryRefinementAgent
+from adapters.agent_adapter import AgentAdapter
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class NLPDomainMaster(DomainMaster):
     """
-    Domain master responsible for coordinating NLP-related tasks.
-    Manages query refinement and entity recognition slaves.
+    Domain master for Natural Language Processing operations.
+    
+    Responsibilities:
+    - Query refinement
+    - Entity recognition
+    - Initial NLP preprocessing
     """
     
     def __init__(self, redis_url: str):
@@ -18,238 +25,251 @@ class NLPDomainMaster(DomainMaster):
         Initialize the NLP domain master.
         
         Args:
-            redis_url: Redis connection URL
+            redis_url: Redis URL for communication
         """
-        super().__init__(domain="nlp", redis_url=redis_url)
+        super().__init__("nlp", redis_url)
         
-        # Track task states for each workflow
-        self.workflow_tasks = {}
-        
-        logger.info("NLPDomainMaster initialized")
+        # Initialize wrapped agents
+        try:
+            # Query refinement agent
+            self.query_refinement = AgentAdapter(
+                agent_instance=QueryRefinementAgent(),
+                agent_type="query_refinement"
+            )
+            logger.info("Query refinement agent initialized")
+            
+            # Entity recognition agent
+            self.entity_recognition = AgentAdapter(
+                agent_instance=EntityRecognitionAgent(),
+                agent_type="entity_recognition"
+            )
+            logger.info("Entity recognition agent initialized")
+            
+        except Exception as e:
+            logger.error(f"Error initializing agents in NLPDomainMaster: {e}")
     
     def process_workflow(self, workflow: Dict[str, Any]):
         """
-        Process a workflow in the NLP domain.
+        Process an incoming NLP workflow.
         
         Args:
             workflow: The workflow data
         """
         request_id = workflow.get("request_id")
-        query = workflow.get("data", {}).get("query", "")
-        context = workflow.get("data", {}).get("context", [])
+        workflow_data = workflow.get("data", {})
+        query = workflow_data.get("query", "")
         
-        logger.info(f"NLPDomainMaster processing workflow {request_id}")
+        if not query:
+            logger.error(f"Missing query in workflow {request_id}")
+            workflow["error"] = "Missing query"
+            self._complete_workflow(workflow, next_domain=None)
+            self.workflow_counter.labels(status="error").inc()
+            return
         
-        # Track in active workflows
+        logger.info(f"Processing workflow {request_id} with query: {query}")
+        
+        # Add this workflow to active workflows
         self.active_workflows[request_id] = {
-            "query_refinement_complete": False,
-            "entity_recognition_complete": False
+            "status": "refining",
+            "tasks": {
+                f"{request_id}_query_refinement": {
+                    "type": "query_refinement",
+                    "status": "pending"
+                }
+            },
+            "query": query,
+            "results": {}
         }
         
-        # Step 1: Start Query Refinement task
-        self._start_query_refinement(request_id, query, context)
+        # Start with query refinement (first task)
+        task_id = f"{request_id}_query_refinement"
+        task = {
+            "task_id": task_id,
+            "request_id": request_id,
+            "slave_type": "query_refinement",
+            "parameters": {
+                "query": query,
+                "context": workflow_data.get("context", [])
+            }
+        }
+        
+        logger.info(f"Dispatching task {task_id} to query refinement slave")
+        self._dispatch_to_slave_pool("query_refinement", task)
+        
+        # Mark workflow as having a pending task
+        self.active_workflows[request_id]["tasks"][task_id]["status"] = "dispatched"
     
     def process_slave_result(self, result: Dict[str, Any]):
         """
-        Process results from slave tasks.
+        Process results from NLP slaves.
         
         Args:
-            result: The result data from a slave
+            result: Result data from a slave
         """
-        request_id = result.get("request_id")
-        slave_type = result.get("slave_type")
-        task_id = result.get("task_id")
-        success = result.get("success", False)
+        task_id = result.get("task_id", "")
+        request_id = result.get("request_id", "")
         
+        # Check if this is a result we're expecting
         if request_id not in self.active_workflows:
             logger.warning(f"Received result for unknown workflow {request_id}")
             return
+            
+        workflow_state = self.active_workflows[request_id]
+        
+        # Update task status in our workflow state
+        if task_id in workflow_state["tasks"]:
+            workflow_state["tasks"][task_id]["status"] = "completed"
+        else:
+            logger.warning(f"Received result for unknown task {task_id}")
+            return
+            
+        if not result.get("success", False):
+            # Handle task failure
+            logger.error(f"Task {task_id} failed: {result.get('error', 'Unknown error')}")
+            self._handle_task_failure(request_id, task_id, result)
+            return
+            
+        # Process result based on task type
+        slave_type = result.get("slave_type", "unknown")
+        task_result = result.get("result", {})
         
         if slave_type == "query_refinement":
-            self._handle_query_refinement_result(request_id, result, success)
+            # Store the refined query in workflow state
+            refined_query = task_result.get("refined_query", workflow_state["query"])
+            workflow_state["refined_query"] = refined_query
+            
+            # Next step: entity recognition
+            self._start_entity_recognition(request_id, refined_query)
+            
         elif slave_type == "entity_recognition":
-            self._handle_entity_recognition_result(request_id, result, success)
+            # Store entities in workflow state
+            entities = task_result.get("entities", {})
+            workflow_state["entities"] = entities
+            
+            # Complete NLP domain work and transfer to Query domain
+            self._complete_nlp_workflow(request_id)
+            
         else:
-            logger.warning(f"Received result from unknown slave type: {slave_type}")
+            logger.warning(f"Unhandled slave type in result: {slave_type}")
     
-    def _start_query_refinement(self, request_id: str, query: str, context: list):
+    def _start_entity_recognition(self, request_id: str, query: str):
         """
-        Start query refinement task.
+        Start entity recognition for the given query.
         
         Args:
-            request_id: The workflow request ID
-            query: The original natural language query
-            context: Optional context for the query
+            request_id: Workflow request ID
+            query: Query to process (usually the refined query)
         """
-        task_id = str(uuid.uuid4())
+        task_id = f"{request_id}_entity_recognition"
         
+        # Create entity recognition task
         task = {
             "task_id": task_id,
             "request_id": request_id,
+            "slave_type": "entity_recognition",
             "parameters": {
-                "query": query,
-                "context": context
+                "query": query
             }
         }
         
-        # Dispatch to query refinement slave pool
-        self._dispatch_to_slave_pool("query_refinement", task)
-        logger.info(f"NLPDomainMaster dispatched query refinement task {task_id} for workflow {request_id}")
-    
-    def _handle_query_refinement_result(self, request_id: str, result: Dict[str, Any], success: bool):
-        """
-        Handle result from query refinement slave.
-        
-        Args:
-            request_id: The workflow request ID
-            result: The task result data
-            success: Whether the task was successful
-        """
-        if not success:
-            self._handle_nlp_error(request_id, "Query refinement failed", result.get("error", "Unknown error"))
-            return
-        
-        # Mark query refinement as complete
-        self.active_workflows[request_id]["query_refinement_complete"] = True
-        
-        # Get the refined query
-        refined_query = result.get("refined_query", "")
-        
-        # Update workflow in Redis
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
-            workflow = json.loads(workflow_json)
-            workflow["data"]["refined_query"] = refined_query
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"NLPDomainMaster received refined query for workflow {request_id}")
-        
-        # Start entity recognition task
-        self._start_entity_recognition(request_id, refined_query)
-    
-    def _start_entity_recognition(self, request_id: str, refined_query: str):
-        """
-        Start entity recognition task.
-        
-        Args:
-            request_id: The workflow request ID
-            refined_query: The refined natural language query
-        """
-        task_id = str(uuid.uuid4())
-        
-        task = {
-            "task_id": task_id,
-            "request_id": request_id,
-            "parameters": {
-                "query": refined_query
-            }
+        # Add task to workflow state
+        self.active_workflows[request_id]["tasks"][task_id] = {
+            "type": "entity_recognition",
+            "status": "pending"
         }
         
-        # Dispatch to entity recognition slave pool
+        # Update workflow status
+        self.active_workflows[request_id]["status"] = "entity_recognition"
+        
+        logger.info(f"Dispatching task {task_id} to entity recognition slave")
         self._dispatch_to_slave_pool("entity_recognition", task)
-        logger.info(f"NLPDomainMaster dispatched entity recognition task {task_id} for workflow {request_id}")
+        
+        # Mark workflow as having a pending task
+        self.active_workflows[request_id]["tasks"][task_id]["status"] = "dispatched"
     
-    def _handle_entity_recognition_result(self, request_id: str, result: Dict[str, Any], success: bool):
+    def _complete_nlp_workflow(self, request_id: str):
         """
-        Handle result from entity recognition slave.
+        Complete the NLP workflow and prepare for passing to the Query domain.
         
         Args:
-            request_id: The workflow request ID
-            result: The task result data
-            success: Whether the task was successful
+            request_id: Workflow request ID
         """
-        if not success:
-            self._handle_nlp_error(request_id, "Entity recognition failed", result.get("error", "Unknown error"))
-            return
+        # Get workflow state
+        workflow_state = self.active_workflows.get(request_id, {})
         
-        # Mark entity recognition as complete
-        self.active_workflows[request_id]["entity_recognition_complete"] = True
-        
-        # Get the recognized entities
-        entities = result.get("entities", {})
-        
-        # Update workflow in Redis
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
-            workflow = json.loads(workflow_json)
-            workflow["data"]["entities"] = entities
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"NLPDomainMaster received entities for workflow {request_id}")
-        
-        # Check if all NLP tasks are complete
-        if self._is_workflow_complete(request_id):
-            self._forward_to_query_domain(request_id)
-    
-    def _is_workflow_complete(self, request_id: str) -> bool:
-        """
-        Check if all tasks for a workflow are complete.
-        
-        Args:
-            request_id: The workflow request ID
-            
-        Returns:
-            Boolean indicating if all tasks are complete
-        """
-        if request_id not in self.active_workflows:
-            return False
-            
-        status = self.active_workflows[request_id]
-        return status["query_refinement_complete"] and status["entity_recognition_complete"]
-    
-    def _forward_to_query_domain(self, request_id: str):
-        """
-        Forward workflow to the query domain.
-        
-        Args:
-            request_id: The workflow request ID
-        """
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
+        # Retrieve workflow from Redis to update it
+        workflow_key = f"workflow:{request_id}"
+        try:
+            workflow_json = self.redis.get(workflow_key)
+            if not workflow_json:
+                logger.error(f"Workflow {request_id} not found in Redis")
+                return
+                
             workflow = json.loads(workflow_json)
             
-            # Complete this domain's workflow and forward to query domain
+            # Update workflow data with NLP results
+            workflow["data"]["refined_query"] = workflow_state.get("refined_query", workflow["data"].get("query", ""))
+            workflow["data"]["entities"] = workflow_state.get("entities", {})
+            
+            # Complete this domain's work and forward to query domain
             self._complete_workflow(workflow, next_domain="query")
             
-            # Clean up tracking
-            if request_id in self.active_workflows:
-                del self.active_workflows[request_id]
+        except Exception as e:
+            logger.error(f"Error completing NLP workflow {request_id}: {e}")
     
-    def _handle_nlp_error(self, request_id: str, error_type: str, error_message: str):
+    def _handle_task_failure(self, request_id: str, task_id: str, result: Dict[str, Any]):
         """
-        Handle errors in NLP tasks.
+        Handle a task failure.
         
         Args:
-            request_id: The workflow request ID
-            error_type: The type of error
-            error_message: The error message
+            request_id: Workflow request ID
+            task_id: Failed task ID
+            result: Failure result data
         """
-        logger.error(f"Error in workflow {request_id}: {error_type} - {error_message}")
+        # Get slave type from task ID
+        slave_type = task_id.split("_")[-1] if "_" in task_id else "unknown"
         
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
+        # Get workflow state
+        workflow_state = self.active_workflows.get(request_id, {})
+        
+        # Retrieve workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        try:
+            workflow_json = self.redis.get(workflow_key)
+            if not workflow_json:
+                logger.error(f"Workflow {request_id} not found in Redis")
+                return
+                
             workflow = json.loads(workflow_json)
             
-            # Mark this domain's step as error
-            for i, step in enumerate(workflow.get("steps", [])):
-                if step.get("domain") == self.domain:
-                    step["status"] = "error"
-                    step["error"] = f"{error_type}: {error_message}"
-                    break
-                    
-            # Add error to workflow
-            workflow["error"] = f"{error_type}: {error_message}"
+            # Add error information to workflow
+            workflow["error"] = f"NLP task failed: {result.get('error', 'Unknown error')}"
+            workflow["error_details"] = {
+                "domain": "nlp",
+                "task": slave_type,
+                "error_type": result.get("error_type", "UnknownError")
+            }
             
-            # Update workflow in Redis
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-            
-            # Send completion to global master
-            self.redis.publish("global:completions", json.dumps(workflow))
-            
-            # Clean up tracking
-            if request_id in self.active_workflows:
-                del self.active_workflows[request_id]
-                self.active_workflows_gauge.dec()
-            
-            # Update metrics
-            self.workflow_counter.labels(status="error").inc()
+            # Try to provide partial results if possible
+            if slave_type == "query_refinement":
+                # Continue with original query if refinement fails
+                workflow_state["refined_query"] = workflow_state["query"]
+                workflow["data"]["refined_query"] = workflow_state["query"]
+                
+                # Try to proceed with entity recognition
+                self._start_entity_recognition(request_id, workflow_state["query"])
+                
+            elif slave_type == "entity_recognition":
+                # If entity recognition fails, provide empty entities and try to continue
+                workflow_state["entities"] = {}
+                workflow["data"]["entities"] = {}
+                
+                # Attempt to proceed to next domain despite failure
+                self._complete_workflow(workflow, next_domain="query")
+                
+            else:
+                # For unknown task types, just pass the error along
+                self._complete_workflow(workflow, next_domain=None)
+                
+        except Exception as e:
+            logger.error(f"Error handling task failure for {task_id}: {e}")

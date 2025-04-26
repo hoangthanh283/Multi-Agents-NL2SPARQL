@@ -1,86 +1,90 @@
 import json
-import uuid
-import time
 import threading
-from typing import Dict, Any, List, Optional
+import time
+import uuid
+from typing import Dict, Any, Optional, List
 
 import redis
 from prometheus_client import Counter, Histogram, Gauge
 
+from master.nlp_master import NLPDomainMaster
+from master.query_master import QueryDomainMaster
+from master.response_master import ResponseDomainMaster
 from utils.logging_utils import setup_logging
-from utils.circuit_breaker import CircuitBreaker
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class GlobalMaster:
     """
-    Global master responsible for coordinating the entire NL2SPARQL pipeline.
-    - Manages workflow creation and tracking
-    - Dispatches workflows to domain masters
-    - Collects results from domain masters
-    - Provides status updates and results to clients
+    Global master that coordinates the NL2SPARQL workflow across domains.
+    
+    The GlobalMaster is responsible for:
+    - Creating and initializing workflows
+    - Routing workflows between domain masters
+    - Handling workflow completion and errors
+    - Providing status updates and metrics
     """
     
-    def __init__(self, redis_url: str):
+    def __init__(self, redis_url: str, endpoint_url: str = None):
         """
         Initialize the global master.
         
         Args:
-            redis_url: Redis connection URL
+            redis_url: Redis URL for communication
+            endpoint_url: SPARQL endpoint URL
         """
         self.redis_url = redis_url
+        self.endpoint_url = endpoint_url
+        
+        # Initialize Redis connections
         self.redis = redis.from_url(redis_url)
         self.pubsub = self.redis.pubsub(ignore_subscribe_messages=True)
         
-        # Track active workflows
+        # Initialize domain masters
+        self.domain_masters = {
+            "nlp": NLPDomainMaster(redis_url),
+            "query": QueryDomainMaster(redis_url),
+            "response": ResponseDomainMaster(redis_url, endpoint_url)
+        }
+        
+        # Keep track of active workflows
         self.active_workflows = {}
         
         # Thread control
         self.running = False
         self.completion_listener_thread = None
         
-        # Circuit breakers for domain masters
-        self.domain_circuit_breakers = {
-            domain: CircuitBreaker(
-                name=f"{domain}_domain_master",
-                failure_threshold=5,
-                recovery_timeout=30,
-                callback=lambda d=domain: logger.error(f"Circuit breaker tripped for {d} domain")
-            )
-            for domain in ["nlp", "query", "response"]
-        }
-        
         # Prometheus metrics
         self.request_counter = Counter(
-            'global_requests_total', 
-            'Total NL2SPARQL requests received',
+            'nl2sparql_requests_total',
+            'Total number of NL2SPARQL requests',
             ['status']
         )
         self.processing_time = Histogram(
-            'global_processing_seconds', 
-            'Total end-to-end processing time for requests'
+            'nl2sparql_processing_seconds',
+            'Time spent processing NL2SPARQL requests'
         )
         self.active_workflows_gauge = Gauge(
-            'global_active_workflows',
-            'Number of currently active workflows'
-        )
-        self.domain_timing = Histogram(
-            'domain_processing_seconds',
-            'Time spent in each domain',
-            ['domain']
+            'nl2sparql_active_workflows',
+            'Number of active NL2SPARQL workflows'
         )
         
         logger.info("GlobalMaster initialized")
     
     def start(self):
-        """Start the global master services."""
+        """Start the global master and all domain masters."""
         if self.running:
             return
             
-        # Subscribe to completion channel from domain masters
+        # Start domain masters
+        for domain, master in self.domain_masters.items():
+            master.start()
+            logger.info(f"Started {domain} domain master")
+        
+        # Subscribe to completion channel
         self.pubsub.subscribe("global:completions")
         
-        # Start listener thread for completions
+        # Start completion listener thread
         self.running = True
         self.completion_listener_thread = threading.Thread(target=self._listen_for_completions)
         self.completion_listener_thread.daemon = True
@@ -89,34 +93,43 @@ class GlobalMaster:
         logger.info("GlobalMaster started")
     
     def stop(self):
-        """Stop the global master services."""
+        """Stop the global master and all domain masters."""
         self.running = False
+        
+        # Stop domain masters
+        for domain, master in self.domain_masters.items():
+            master.stop()
+            logger.info(f"Stopped {domain} domain master")
+        
+        # Stop listener thread
         if self.completion_listener_thread:
             self.completion_listener_thread.join(timeout=1.0)
+        
+        # Unsubscribe
         self.pubsub.unsubscribe()
+        
         logger.info("GlobalMaster stopped")
     
-    def process_nl_query(self, query: str, context: List[Dict[str, Any]] = None) -> str:
+    def create_workflow(self, query: str, context: List[str] = None) -> str:
         """
-        Process a natural language query through the domain masters.
+        Create a new workflow for processing a natural language query.
         
         Args:
             query: The natural language query
-            context: Optional context for the query
+            context: Optional context information
             
         Returns:
-            Request ID for tracking the workflow
+            Workflow request ID
         """
-        context = context or []
         request_id = str(uuid.uuid4())
         
-        # Create a new workflow
+        # Create workflow structure
         workflow = {
             "request_id": request_id,
             "created_at": time.time(),
             "data": {
                 "query": query,
-                "context": context
+                "context": context or []
             },
             "steps": [
                 {"domain": "nlp", "status": "pending"},
@@ -128,199 +141,202 @@ class GlobalMaster:
         
         # Store workflow in Redis
         workflow_key = f"workflow:{request_id}"
-        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)  # Expire after 1 hour
+        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)  # 1 hour expiration
         
         # Add to active workflows
         self.active_workflows[request_id] = {
-            "status": "processing",
-            "started_at": time.time()
+            "status": "created",
+            "query": query,
+            "created_at": time.time()
         }
+        
+        # Update metrics
+        self.request_counter.labels(status="created").inc()
         self.active_workflows_gauge.inc()
         
-        # Update metrics
-        self.request_counter.labels(status="received").inc()
-        
-        # Mark NLP domain step as started
-        workflow["steps"][0]["started_at"] = time.time()
-        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)
-        
-        # Dispatch to NLP domain
-        try:
-            with self.domain_circuit_breakers["nlp"]:
-                self.redis.publish("domain:nlp:requests", json.dumps(workflow))
-                logger.info(f"GlobalMaster dispatched workflow {request_id} to NLP domain")
-        except Exception as e:
-            logger.error(f"Error dispatching to NLP domain: {e}")
-            workflow["steps"][0]["status"] = "error"
-            workflow["steps"][0]["error"] = str(e)
-            workflow["error"] = f"Failed to dispatch to NLP domain: {str(e)}"
-            self.redis.set(workflow_key, json.dumps(workflow), ex=3600)
-            self.request_counter.labels(status="error").inc()
-        
+        logger.info(f"Created workflow {request_id} for query: {query}")
         return request_id
     
-    def _listen_for_completions(self):
-        """Listen for workflow completions from domain masters."""
-        while self.running:
-            message = self.pubsub.get_message()
-            if message and message["type"] == "message":
-                try:
-                    workflow = json.loads(message["data"])
-                    request_id = workflow.get("request_id")
-                    
-                    if not request_id:
-                        logger.warning("GlobalMaster received completion without request_id")
-                        continue
-                        
-                    # Process the completed workflow
-                    self._process_completed_workflow(workflow)
-                    
-                except Exception as e:
-                    logger.error(f"Error processing completion in GlobalMaster: {e}")
-            
-            # Small sleep to prevent CPU spinning
-            time.sleep(0.01)
-    
-    def _process_completed_workflow(self, workflow: Dict[str, Any]):
+    def start_workflow(self, request_id: str):
         """
-        Process a completed workflow.
+        Start processing a workflow.
         
         Args:
-            workflow: The completed workflow data
+            request_id: Workflow request ID
         """
-        request_id = workflow.get("request_id")
+        # Get workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        workflow_json = self.redis.get(workflow_key)
         
-        # Update workflow in Redis
-        workflow["completed_at"] = time.time()
-        workflow["status"] = "completed"
+        if not workflow_json:
+            logger.error(f"Workflow {request_id} not found")
+            return False
         
-        # Calculate domain timing metrics if timestamps are available
-        for i, step in enumerate(workflow.get("steps", [])):
-            if step.get("started_at") and step.get("completed_at"):
-                domain = step.get("domain")
-                processing_time = step.get("completed_at") - step.get("started_at")
-                self.domain_timing.labels(domain=domain).observe(processing_time)
+        # Parse workflow
+        workflow = json.loads(workflow_json)
         
-        # Remove from active workflows
+        # Update status
         if request_id in self.active_workflows:
-            started_at = self.active_workflows[request_id].get("started_at")
-            if started_at:
-                self.processing_time.observe(time.time() - started_at)
-            
-            del self.active_workflows[request_id]
-            self.active_workflows_gauge.dec()
+            self.active_workflows[request_id]["status"] = "processing"
         
-        # Check for errors
-        has_error = "error" in workflow or any(
-            "error" in step for step in workflow.get("steps", [])
-        )
+        # Send to NLP domain (always starts there)
+        self.redis.publish("domain:nlp:requests", json.dumps(workflow))
         
         # Update metrics
-        if has_error:
-            self.request_counter.labels(status="error").inc()
-        else:
-            self.request_counter.labels(status="success").inc()
+        self.request_counter.labels(status="started").inc()
         
-        # Store final workflow state in Redis
-        self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"GlobalMaster processed completion for workflow {request_id}")
+        logger.info(f"Started workflow {request_id}")
+        return True
     
     def get_workflow_status(self, request_id: str) -> Optional[Dict[str, Any]]:
         """
         Get the current status of a workflow.
         
         Args:
-            request_id: The workflow request ID
+            request_id: Workflow request ID
             
         Returns:
-            Current workflow status or None if not found
+            Workflow status information or None if not found
         """
-        workflow_json = self.redis.get(f"workflow:{request_id}")
+        # Get workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        workflow_json = self.redis.get(workflow_key)
+        
         if not workflow_json:
             return None
         
-        try:
-            workflow = json.loads(workflow_json)
-            
-            # Calculate completion percentage
-            total_steps = len(workflow.get("steps", []))
-            completed_steps = sum(
-                1 for step in workflow.get("steps", [])
-                if step.get("status") == "completed"
-            )
-            
-            completion_percentage = (completed_steps / max(1, total_steps)) * 100
-            
-            return {
-                "request_id": request_id,
-                "status": workflow.get("status", "processing"),
-                "current_domain": workflow.get("current_domain"),
-                "completion_percentage": completion_percentage,
-                "completed_steps": completed_steps,
-                "total_steps": total_steps,
-                "errors": workflow.get("errors", []),
-                "created_at": workflow.get("created_at"),
-                "completed_at": workflow.get("completed_at")
-            }
-        except json.JSONDecodeError:
-            return None
+        # Parse workflow
+        workflow = json.loads(workflow_json)
+        
+        # Extract status information
+        status_info = {
+            "request_id": request_id,
+            "created_at": workflow.get("created_at"),
+            "current_domain": workflow.get("current_domain"),
+            "completed": "completed_at" in workflow,
+            "has_error": "error" in workflow,
+        }
+        
+        if "completed_at" in workflow:
+            status_info["completed_at"] = workflow["completed_at"]
+            status_info["processing_time"] = workflow["completed_at"] - workflow.get("created_at", 0)
+        
+        if "error" in workflow:
+            status_info["error"] = workflow["error"]
+            status_info["error_details"] = workflow.get("error_details")
+        
+        # Add domain steps status
+        status_info["steps"] = workflow.get("steps", [])
+        
+        return status_info
     
     def get_workflow_result(self, request_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get the result of a completed workflow.
+        Get the final result of a completed workflow.
         
         Args:
-            request_id: The workflow request ID
+            request_id: Workflow request ID
             
         Returns:
-            Workflow result or None if not found or not completed
+            Workflow result data or None if not found/completed
         """
-        workflow_json = self.redis.get(f"workflow:{request_id}")
+        # Get workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        workflow_json = self.redis.get(workflow_key)
+        
         if not workflow_json:
             return None
         
-        try:
-            workflow = json.loads(workflow_json)
-            
-            # Check if workflow is completed
-            all_completed = all(
-                step.get("status") == "completed"
-                for step in workflow.get("steps", [])
-            )
-            
-            if not all_completed and not workflow.get("error"):
-                return {
-                    "request_id": request_id,
-                    "status": "processing",
-                    "message": "Workflow still processing"
-                }
-            
-            # Get the final response if available
-            data = workflow.get("data", {})
-            
-            result = {
-                "request_id": request_id,
-                "original_query": data.get("query", ""),
-                "refined_query": data.get("refined_query", ""),
-                "response": data.get("response", ""),
-                "status": "completed" if not workflow.get("error") else "error"
+        # Parse workflow
+        workflow = json.loads(workflow_json)
+        
+        # Check if completed
+        if "completed_at" not in workflow:
+            logger.warning(f"Workflow {request_id} not completed yet")
+            return {
+                "completed": False,
+                "request_id": request_id
             }
+        
+        # Extract result information
+        result = {
+            "completed": True,
+            "request_id": request_id,
+            "created_at": workflow.get("created_at"),
+            "completed_at": workflow.get("completed_at"),
+            "processing_time": workflow.get("completed_at", 0) - workflow.get("created_at", 0),
+            "original_query": workflow.get("data", {}).get("query", ""),
+            "response": workflow.get("data", {}).get("response", ""),
+        }
+        
+        # Add error information if present
+        if "error" in workflow:
+            result["error"] = workflow["error"]
+            result["success"] = False
+        else:
+            result["success"] = True
+        
+        # Add SPARQL query if available
+        sparql_query = workflow.get("data", {}).get("sparql_query")
+        if sparql_query:
+            result["sparql_query"] = sparql_query
+        
+        return result
+    
+    def _listen_for_completions(self):
+        """Listen for workflow completions."""
+        while self.running:
+            message = self.pubsub.get_message()
+            if message and message["type"] == "message":
+                try:
+                    channel = message["channel"]
+                    if isinstance(channel, bytes):
+                        channel = channel.decode('utf-8')
+                    
+                    # Process only messages from completion channel
+                    if channel == "global:completions":
+                        workflow = json.loads(message["data"])
+                        self._handle_workflow_completion(workflow)
+                        
+                except Exception as e:
+                    logger.error(f"Error processing completion: {e}")
             
-            # Include error if present
-            if workflow.get("error"):
-                result["error"] = workflow.get("error")
-            
-            # Include SPARQL query and other data for debugging
-            result["debug_info"] = {
-                "sparql_query": data.get("sparql_query", ""),
-                "entities": data.get("entities", {}),
-                "validation_result": data.get("validation_result", {})
-            }
-            
-            return result
-        except json.JSONDecodeError:
-            return None
+            # Small sleep to prevent CPU spinning
+            time.sleep(0.01)
+    
+    def _handle_workflow_completion(self, workflow: Dict[str, Any]):
+        """
+        Handle a completed workflow.
+        
+        Args:
+            workflow: The completed workflow data
+        """
+        request_id = workflow.get("request_id")
+        
+        # Calculate processing time
+        created_at = workflow.get("created_at", 0)
+        completed_at = time.time()
+        processing_time = completed_at - created_at
+        
+        # Add completion timestamp if not already present
+        if "completed_at" not in workflow:
+            workflow["completed_at"] = completed_at
+        
+        # Update workflow in Redis
+        workflow_key = f"workflow:{request_id}"
+        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)  # 1 hour expiration
+        
+        # Update metrics
+        self.processing_time.observe(processing_time)
+        status = "error" if "error" in workflow else "completed"
+        self.request_counter.labels(status=status).inc()
+        
+        if request_id in self.active_workflows:
+            # Remove from active workflows
+            del self.active_workflows[request_id]
+            self.active_workflows_gauge.dec()
+        
+        logger.info(f"Workflow {request_id} completed in {processing_time:.2f}s with status: {status}")
     
     def get_health(self) -> Dict[str, Any]:
         """
@@ -329,26 +345,13 @@ class GlobalMaster:
         Returns:
             Health status information
         """
+        # Get domain masters health
+        domain_health = {}
+        for domain, master in self.domain_masters.items():
+            domain_health[domain] = master.get_health()
+        
         return {
-            "global_master": {
-                "status": "healthy" if self.running else "unhealthy",
-                "active_workflows": len(self.active_workflows)
-            },
-            "domain_masters": {
-                domain: {
-                    "status": "healthy" if not cb.is_open() else "unhealthy",
-                    "circuit_breaker": "closed" if not cb.is_open() else "open"
-                }
-                for domain, cb in self.domain_circuit_breakers.items()
-            },
-            "redis": {
-                "status": "healthy" if self._check_redis() else "unhealthy"
-            }
+            "status": "healthy" if self.running else "stopped",
+            "active_workflows": len(self.active_workflows),
+            "domain_masters": domain_health
         }
-    
-    def _check_redis(self) -> bool:
-        """Check if Redis connection is healthy."""
-        try:
-            return self.redis.ping()
-        except Exception:
-            return False

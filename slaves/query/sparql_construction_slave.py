@@ -2,16 +2,17 @@ from typing import Dict, Any
 import time
 
 from slaves.base import AbstractSlave
-from agents.sparql_construction import SPARQLConstructionAgent
+from agents.sparql_construction import SparqlConstructionAgent
+from adapters.agent_adapter import AgentAdapter
 from utils.logging_utils import setup_logging
 from prometheus_client import Counter, Histogram
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
-class SPARQLConstructionSlave(AbstractSlave):
+class SparqlConstructionSlave(AbstractSlave):
     """
-    Slave responsible for constructing SPARQL queries.
-    Wraps the existing SPARQLConstructionAgent to adapt it to the slave interface.
+    Slave responsible for constructing SPARQL queries from mapped entities.
+    Wraps the existing SparqlConstructionAgent through an adapter.
     """
     
     def __init__(self, config: Dict[str, Any] = None):
@@ -19,12 +20,23 @@ class SPARQLConstructionSlave(AbstractSlave):
         Initialize the SPARQL construction slave.
         
         Args:
-            config: Configuration dictionary (optional)
+            config: Configuration dictionary
         """
         self.config = config or {}
         
-        # Initialize the existing agent
-        self.agent = SPARQLConstructionAgent()
+        try:
+            # Initialize the SPARQL construction agent
+            agent = SparqlConstructionAgent()
+            
+            # Wrap the agent with an adapter
+            self.agent_adapter = AgentAdapter(
+                agent_instance=agent,
+                agent_type="sparql_construction"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error initializing SparqlConstructionSlave: {e}")
+            self.agent_adapter = None
         
         # Metrics
         self.task_counter = Counter(
@@ -36,89 +48,75 @@ class SPARQLConstructionSlave(AbstractSlave):
             'sparql_construction_processing_seconds',
             'Time spent processing SPARQL construction tasks'
         )
-        self.query_counter = Counter(
-            'sparql_queries_total',
-            'Total SPARQL queries constructed',
-            ['query_type']
-        )
         
         # Stats
         self.total_processed = 0
-        self.successful_queries = 0
-        self.failed_queries = 0
-        self.fix_attempts = 0
+        self.successful_tasks = 0
+        self.failed_tasks = 0
         self.start_time = time.time()
         
-        logger.info("SPARQLConstructionSlave initialized")
+        logger.info("SparqlConstructionSlave initialized")
     
     def execute_task(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Construct a SPARQL query based on the query plan and mapped entities.
+        Construct a SPARQL query from mapped entities.
         
         Args:
-            parameters: Task parameters including refined query, mapped entities, and query plan
+            parameters: Task parameters including mapped entities and query context
             
         Returns:
-            Generated SPARQL query and metadata
+            Constructed SPARQL query
         """
         start_time = time.time()
         try:
-            refined_query = parameters.get("refined_query", "")
             mapped_entities = parameters.get("mapped_entities", {})
-            query_plan = parameters.get("query_plan", {})
-            fix_attempt = parameters.get("fix_attempt", False)
-            validation_feedback = parameters.get("validation_feedback", "")
-            previous_query = parameters.get("previous_query", "")
+            query_context = parameters.get("query_context", "")
             
-            if not refined_query or not mapped_entities:
+            if not mapped_entities:
                 self.task_counter.labels(status="error").inc()
-                self.failed_queries += 1
+                self.failed_tasks += 1
                 return {
                     "success": False,
-                    "error": "Missing required parameters: refined_query or mapped_entities"
+                    "error": "Missing mapped entities parameter"
                 }
             
-            # Track if this is a fix attempt
-            if fix_attempt:
-                self.fix_attempts += 1
+            # Check if agent adapter is initialized
+            if not self.agent_adapter:
+                self.task_counter.labels(status="error").inc()
+                self.failed_tasks += 1
+                return {
+                    "success": False,
+                    "error": "SPARQL construction agent adapter not initialized properly"
+                }
             
-            # Construct SPARQL query using the agent
-            if fix_attempt and previous_query and validation_feedback:
-                sparql_query, metadata = self.agent.construct_query(
-                    refined_query, 
-                    mapped_entities, 
-                    query_plan,
-                    fix=True,
-                    validation_feedback=validation_feedback,
-                    previous_query=previous_query
-                )
-            else:
-                sparql_query, metadata = self.agent.construct_query(
-                    refined_query, 
-                    mapped_entities, 
-                    query_plan
-                )
+            # Execute SPARQL construction using the agent adapter
+            result = self.agent_adapter.execute_task({
+                "mapped_entities": mapped_entities,
+                "query_context": query_context
+            })
+            
+            if not result.get("success", False):
+                self.task_counter.labels(status="error").inc()
+                self.failed_tasks += 1
+                return result
+                
+            sparql_query = result.get("result", {}).get("sparql_query", "")
             
             # Update metrics
             self.task_counter.labels(status="success").inc()
             self.total_processed += 1
-            self.successful_queries += 1
-            
-            # Track query type in metrics
-            query_type = metadata.get("query_type", "unknown")
-            self.query_counter.labels(query_type=query_type).inc()
+            self.successful_tasks += 1
             
             return {
                 "success": True,
-                "sparql": sparql_query,
-                "metadata": metadata
+                "sparql_query": sparql_query
             }
         except Exception as e:
             # Update error metrics
             self.task_counter.labels(status="error").inc()
-            self.failed_queries += 1
+            self.failed_tasks += 1
             
-            logger.error(f"Error in SPARQLConstructionSlave: {e}")
+            logger.error(f"Error in SparqlConstructionSlave: {e}")
             return {
                 "success": False,
                 "error": str(e)
@@ -136,15 +134,18 @@ class SPARQLConstructionSlave(AbstractSlave):
         """
         uptime = time.time() - self.start_time
         
+        # Include adapter status if available
+        adapter_status = self.agent_adapter.get_status() if self.agent_adapter else {"status": "unavailable"}
+        
         return {
             "type": "sparql_construction",
-            "status": "active",
+            "status": "active" if self.agent_adapter else "degraded",
             "uptime_seconds": uptime,
             "total_processed": self.total_processed,
-            "successful_queries": self.successful_queries,
-            "failed_queries": self.failed_queries,
-            "fix_attempts": self.fix_attempts,
-            "success_rate": self.successful_queries / max(1, self.total_processed) * 100
+            "successful_tasks": self.successful_tasks,
+            "failed_tasks": self.failed_tasks,
+            "success_rate": self.successful_tasks / max(1, self.total_processed) * 100,
+            "adapter": adapter_status
         }
     
     def get_health(self) -> bool:
@@ -154,4 +155,7 @@ class SPARQLConstructionSlave(AbstractSlave):
         Returns:
             Boolean indicating health status
         """
-        return hasattr(self, 'agent') and hasattr(self.agent, 'construct_query')
+        return (
+            self.agent_adapter is not None and 
+            self.agent_adapter.is_healthy()
+        )

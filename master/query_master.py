@@ -1,352 +1,361 @@
-import uuid
 import json
+import time
 from typing import Dict, Any
 
 from master.base import DomainMaster
+from agents.ontology_mapping import OntologyMappingAgent
+from agents.sparql_construction import SparqlConstructionAgent
+from agents.sparql_validation import SparqlValidationAgent
+from adapters.agent_adapter import AgentAdapter
 from utils.logging_utils import setup_logging
+from database.ontology_store import OntologyStore
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class QueryDomainMaster(DomainMaster):
     """
-    Domain master responsible for coordinating query-related tasks.
-    Manages ontology mapping, SPARQL construction, and validation slaves.
+    Domain master for Query operations.
+    
+    Responsibilities:
+    - Ontology mapping
+    - SPARQL query construction
+    - Query validation
     """
     
-    def __init__(self, redis_url: str):
+    def __init__(self, redis_url: str, ontology_store: OntologyStore = None):
         """
-        Initialize the query domain master.
+        Initialize the Query domain master.
         
         Args:
-            redis_url: Redis connection URL
+            redis_url: Redis URL for communication
+            ontology_store: Optional ontology store instance
         """
-        super().__init__(domain="query", redis_url=redis_url)
+        super().__init__("query", redis_url)
         
-        # Track task states for each workflow
-        self.active_workflows = {}
+        # Initialize ontology store if needed
+        self.ontology_store = ontology_store
+        if not self.ontology_store:
+            try:
+                self.ontology_store = OntologyStore()
+            except Exception as e:
+                logger.error(f"Error initializing OntologyStore: {e}")
+                self.ontology_store = None
         
-        logger.info("QueryDomainMaster initialized")
+        # Initialize wrapped agents
+        try:
+            # Ontology mapping agent
+            self.ontology_mapping = AgentAdapter(
+                agent_instance=OntologyMappingAgent(ontology_store=self.ontology_store),
+                agent_type="ontology_mapping"
+            )
+            logger.info("Ontology mapping agent initialized")
+            
+            # SPARQL construction agent
+            self.sparql_construction = AgentAdapter(
+                agent_instance=SparqlConstructionAgent(),
+                agent_type="sparql_construction"
+            )
+            logger.info("SPARQL construction agent initialized")
+            
+            # SPARQL validation agent
+            self.sparql_validation = AgentAdapter(
+                agent_instance=SparqlValidationAgent(),
+                agent_type="validation"
+            )
+            logger.info("SPARQL validation agent initialized")
+            
+        except Exception as e:
+            logger.error(f"Error initializing agents in QueryDomainMaster: {e}")
     
     def process_workflow(self, workflow: Dict[str, Any]):
         """
-        Process a workflow in the query domain.
+        Process an incoming Query workflow.
         
         Args:
             workflow: The workflow data
         """
         request_id = workflow.get("request_id")
-        refined_query = workflow.get("data", {}).get("refined_query", "")
-        entities = workflow.get("data", {}).get("entities", {})
+        workflow_data = workflow.get("data", {})
         
-        logger.info(f"QueryDomainMaster processing workflow {request_id}")
+        # Check if we have all necessary data from NLP domain
+        if "entities" not in workflow_data:
+            logger.error(f"Missing entities in workflow {request_id}")
+            workflow["error"] = "Missing entities from NLP domain"
+            self._complete_workflow(workflow, next_domain=None)
+            self.workflow_counter.labels(status="error").inc()
+            return
         
-        # Track in active workflows
+        refined_query = workflow_data.get("refined_query", workflow_data.get("query", ""))
+        entities = workflow_data.get("entities", {})
+        
+        logger.info(f"Processing workflow {request_id} with {len(entities)} entities")
+        
+        # Add this workflow to active workflows
         self.active_workflows[request_id] = {
-            "ontology_mapping_complete": False,
-            "sparql_construction_complete": False,
-            "validation_complete": False,
-            "sparql_query": None,
-            "validation_result": None
+            "status": "ontology_mapping",
+            "tasks": {
+                f"{request_id}_ontology_mapping": {
+                    "type": "ontology_mapping",
+                    "status": "pending"
+                }
+            },
+            "refined_query": refined_query,
+            "entities": entities,
+            "results": {}
         }
         
-        # Step 1: Start Ontology Mapping task
-        self._start_ontology_mapping(request_id, refined_query, entities)
+        # Start with ontology mapping (first task)
+        task_id = f"{request_id}_ontology_mapping"
+        task = {
+            "task_id": task_id,
+            "request_id": request_id,
+            "slave_type": "ontology_mapping",
+            "parameters": {
+                "entities": entities,
+                "query_context": refined_query
+            }
+        }
+        
+        logger.info(f"Dispatching task {task_id} to ontology mapping slave")
+        self._dispatch_to_slave_pool("ontology_mapping", task)
+        
+        # Mark workflow as having a pending task
+        self.active_workflows[request_id]["tasks"][task_id]["status"] = "dispatched"
     
     def process_slave_result(self, result: Dict[str, Any]):
         """
-        Process results from slave tasks.
+        Process results from Query slaves.
         
         Args:
-            result: The result data from a slave
+            result: Result data from a slave
         """
-        request_id = result.get("request_id")
-        slave_type = result.get("slave_type")
-        task_id = result.get("task_id")
-        success = result.get("success", False)
+        task_id = result.get("task_id", "")
+        request_id = result.get("request_id", "")
         
+        # Check if this is a result we're expecting
         if request_id not in self.active_workflows:
             logger.warning(f"Received result for unknown workflow {request_id}")
             return
+            
+        workflow_state = self.active_workflows[request_id]
+        
+        # Update task status in our workflow state
+        if task_id in workflow_state["tasks"]:
+            workflow_state["tasks"][task_id]["status"] = "completed"
+        else:
+            logger.warning(f"Received result for unknown task {task_id}")
+            return
+            
+        if not result.get("success", False):
+            # Handle task failure
+            logger.error(f"Task {task_id} failed: {result.get('error', 'Unknown error')}")
+            self._handle_task_failure(request_id, task_id, result)
+            return
+            
+        # Process result based on task type
+        slave_type = result.get("slave_type", "unknown")
+        task_result = result.get("result", {})
         
         if slave_type == "ontology_mapping":
-            self._handle_ontology_mapping_result(request_id, result, success)
+            # Store the mapped entities in workflow state
+            mapped_entities = task_result.get("mapped_entities", {})
+            workflow_state["mapped_entities"] = mapped_entities
+            
+            # Next step: SPARQL construction
+            self._start_sparql_construction(request_id, mapped_entities)
+            
         elif slave_type == "sparql_construction":
-            self._handle_sparql_construction_result(request_id, result, success)
-        elif slave_type == "sparql_validation":
-            self._handle_validation_result(request_id, result, success)
+            # Store SPARQL query in workflow state
+            sparql_query = task_result.get("sparql_query", "")
+            workflow_state["sparql_query"] = sparql_query
+            
+            # Next step: SPARQL validation
+            self._start_sparql_validation(request_id, sparql_query)
+            
+        elif slave_type == "validation":
+            # Store validation result in workflow state
+            validation_result = task_result.get("validation_result", {"valid": False})
+            workflow_state["validation_result"] = validation_result
+            
+            # Complete Query domain work and transfer to Response domain
+            self._complete_query_workflow(request_id)
+            
         else:
-            logger.warning(f"Received result from unknown slave type: {slave_type}")
+            logger.warning(f"Unhandled slave type in result: {slave_type}")
     
-    def _start_ontology_mapping(self, request_id: str, refined_query: str, entities: Dict[str, Any]):
+    def _start_sparql_construction(self, request_id: str, mapped_entities: Dict[str, Any]):
         """
-        Start ontology mapping task.
+        Start SPARQL query construction.
         
         Args:
-            request_id: The workflow request ID
-            refined_query: The refined query
-            entities: Recognized entities from NLP domain
+            request_id: Workflow request ID
+            mapped_entities: Mapped entities to use in query construction
         """
-        task_id = str(uuid.uuid4())
+        task_id = f"{request_id}_sparql_construction"
         
+        # Get the refined query from workflow state
+        workflow_state = self.active_workflows[request_id]
+        refined_query = workflow_state.get("refined_query", "")
+        
+        # Create SPARQL construction task
         task = {
             "task_id": task_id,
             "request_id": request_id,
+            "slave_type": "sparql_construction",
             "parameters": {
-                "query": refined_query,
-                "entities": entities
+                "mapped_entities": mapped_entities,
+                "query_context": refined_query
             }
         }
         
-        # Dispatch to ontology mapping slave pool
-        self._dispatch_to_slave_pool("ontology_mapping", task)
-        logger.info(f"QueryDomainMaster dispatched ontology mapping task {task_id} for workflow {request_id}")
-    
-    def _handle_ontology_mapping_result(self, request_id: str, result: Dict[str, Any], success: bool):
-        """
-        Handle result from ontology mapping slave.
-        
-        Args:
-            request_id: The workflow request ID
-            result: The task result data
-            success: Whether the task was successful
-        """
-        if not success:
-            self._handle_query_error(request_id, "Ontology mapping failed", result.get("error", "Unknown error"))
-            return
-        
-        # Mark ontology mapping as complete
-        self.active_workflows[request_id]["ontology_mapping_complete"] = True
-        
-        # Get the mapped ontology entities
-        ontology_mappings = result.get("ontology_mappings", {})
-        
-        # Update workflow in Redis
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
-            workflow = json.loads(workflow_json)
-            workflow["data"]["ontology_mappings"] = ontology_mappings
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"QueryDomainMaster received ontology mappings for workflow {request_id}")
-        
-        # Start SPARQL construction task
-        self._start_sparql_construction(request_id, ontology_mappings)
-    
-    def _start_sparql_construction(self, request_id: str, ontology_mappings: Dict[str, Any]):
-        """
-        Start SPARQL construction task.
-        
-        Args:
-            request_id: The workflow request ID
-            ontology_mappings: Ontology mappings from previous step
-        """
-        # Get workflow data
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if not workflow_json:
-            self._handle_query_error(request_id, "Workflow not found", "Cannot retrieve workflow data")
-            return
-            
-        workflow = json.loads(workflow_json)
-        refined_query = workflow.get("data", {}).get("refined_query", "")
-        entities = workflow.get("data", {}).get("entities", {})
-        
-        task_id = str(uuid.uuid4())
-        
-        task = {
-            "task_id": task_id,
-            "request_id": request_id,
-            "parameters": {
-                "query": refined_query,
-                "entities": entities,
-                "ontology_mappings": ontology_mappings
-            }
+        # Add task to workflow state
+        self.active_workflows[request_id]["tasks"][task_id] = {
+            "type": "sparql_construction",
+            "status": "pending"
         }
         
-        # Dispatch to SPARQL construction slave pool
+        # Update workflow status
+        self.active_workflows[request_id]["status"] = "sparql_construction"
+        
+        logger.info(f"Dispatching task {task_id} to SPARQL construction slave")
         self._dispatch_to_slave_pool("sparql_construction", task)
-        logger.info(f"QueryDomainMaster dispatched SPARQL construction task {task_id} for workflow {request_id}")
+        
+        # Mark workflow as having a pending task
+        self.active_workflows[request_id]["tasks"][task_id]["status"] = "dispatched"
     
-    def _handle_sparql_construction_result(self, request_id: str, result: Dict[str, Any], success: bool):
+    def _start_sparql_validation(self, request_id: str, sparql_query: str):
         """
-        Handle result from SPARQL construction slave.
+        Start SPARQL query validation.
         
         Args:
-            request_id: The workflow request ID
-            result: The task result data
-            success: Whether the task was successful
+            request_id: Workflow request ID
+            sparql_query: SPARQL query to validate
         """
-        if not success:
-            self._handle_query_error(request_id, "SPARQL construction failed", result.get("error", "Unknown error"))
-            return
+        task_id = f"{request_id}_sparql_validation"
         
-        # Mark SPARQL construction as complete
-        self.active_workflows[request_id]["sparql_construction_complete"] = True
-        
-        # Get the constructed SPARQL query
-        sparql_query = result.get("sparql_query", "")
-        self.active_workflows[request_id]["sparql_query"] = sparql_query
-        
-        # Update workflow in Redis
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
-            workflow = json.loads(workflow_json)
-            workflow["data"]["sparql_query"] = sparql_query
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"QueryDomainMaster received SPARQL query for workflow {request_id}")
-        
-        # Start validation task
-        self._start_validation(request_id, sparql_query)
-    
-    def _start_validation(self, request_id: str, sparql_query: str):
-        """
-        Start SPARQL validation task.
-        
-        Args:
-            request_id: The workflow request ID
-            sparql_query: The constructed SPARQL query
-        """
-        task_id = str(uuid.uuid4())
-        
+        # Create SPARQL validation task
         task = {
             "task_id": task_id,
             "request_id": request_id,
+            "slave_type": "validation",
             "parameters": {
-                "sparql_query": sparql_query
+                "query": sparql_query,
+                "query_type": "sparql"
             }
         }
         
-        # Dispatch to validation slave pool
-        self._dispatch_to_slave_pool("sparql_validation", task)
-        logger.info(f"QueryDomainMaster dispatched validation task {task_id} for workflow {request_id}")
+        # Add task to workflow state
+        self.active_workflows[request_id]["tasks"][task_id] = {
+            "type": "sparql_validation",
+            "status": "pending"
+        }
+        
+        # Update workflow status
+        self.active_workflows[request_id]["status"] = "sparql_validation"
+        
+        logger.info(f"Dispatching task {task_id} to SPARQL validation slave")
+        self._dispatch_to_slave_pool("validation", task)
+        
+        # Mark workflow as having a pending task
+        self.active_workflows[request_id]["tasks"][task_id]["status"] = "dispatched"
     
-    def _handle_validation_result(self, request_id: str, result: Dict[str, Any], success: bool):
+    def _complete_query_workflow(self, request_id: str):
         """
-        Handle result from validation slave.
+        Complete the Query workflow and prepare for passing to the Response domain.
         
         Args:
-            request_id: The workflow request ID
-            result: The task result data
-            success: Whether the task was successful
+            request_id: Workflow request ID
         """
-        # Mark validation as complete regardless of success
-        # Even if validation fails, we still want to forward the query 
-        # (with validation errors) to the response domain
-        self.active_workflows[request_id]["validation_complete"] = True
+        # Get workflow state
+        workflow_state = self.active_workflows.get(request_id, {})
         
-        # Get validation result
-        validation_result = result.get("validation_result", {})
-        self.active_workflows[request_id]["validation_result"] = validation_result
-        
-        # Update workflow in Redis
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
-            workflow = json.loads(workflow_json)
-            workflow["data"]["validation_result"] = validation_result
-            
-            # If validation failed but we have a query, we'll forward it anyway
-            # Response domain will handle explaining validation issues to the user
-            if not success and "error" not in workflow:
-                workflow["data"]["validation_errors"] = result.get("error", "Validation failed")
+        # Retrieve workflow from Redis to update it
+        workflow_key = f"workflow:{request_id}"
+        try:
+            workflow_json = self.redis.get(workflow_key)
+            if not workflow_json:
+                logger.error(f"Workflow {request_id} not found in Redis")
+                return
                 
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-        
-        logger.info(f"QueryDomainMaster received validation result for workflow {request_id}")
-        
-        # Check if all query tasks are complete
-        if self._is_workflow_complete(request_id):
-            self._forward_to_response_domain(request_id)
-    
-    def _is_workflow_complete(self, request_id: str) -> bool:
-        """
-        Check if all tasks for a workflow are complete.
-        
-        Args:
-            request_id: The workflow request ID
-            
-        Returns:
-            Boolean indicating if all tasks are complete
-        """
-        if request_id not in self.active_workflows:
-            return False
-            
-        status = self.active_workflows[request_id]
-        return (
-            status["ontology_mapping_complete"] and 
-            status["sparql_construction_complete"] and 
-            status["validation_complete"]
-        )
-    
-    def _forward_to_response_domain(self, request_id: str):
-        """
-        Forward workflow to the response domain.
-        
-        Args:
-            request_id: The workflow request ID
-        """
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
             workflow = json.loads(workflow_json)
             
-            # Get query execution results if validation passed
-            status = self.active_workflows[request_id]
-            validation_passed = status["validation_result"].get("valid", False) if status["validation_result"] else False
+            # Update workflow data with Query results
+            workflow["data"]["sparql_query"] = workflow_state.get("sparql_query", "")
+            workflow["data"]["mapped_entities"] = workflow_state.get("mapped_entities", {})
+            workflow["data"]["validation_result"] = workflow_state.get("validation_result", {"valid": False})
             
-            if validation_passed and status["sparql_query"]:
-                # Execute the query and add results to workflow data
-                try:
-                    # Query execution is simplified here - in a real implementation,
-                    # you might want to add a query execution slave
-                    sparql_query = status["sparql_query"]
-                    # Mock some results for demonstration
-                    query_results = {"results": ["Sample result 1", "Sample result 2"]}
-                    workflow["data"]["query_results"] = query_results
-                except Exception as e:
-                    logger.error(f"Error executing query for workflow {request_id}: {str(e)}")
-                    workflow["data"]["query_execution_error"] = str(e)
-            
-            # Complete this domain's workflow and forward to response domain
+            # Complete this domain's work and forward to response domain
             self._complete_workflow(workflow, next_domain="response")
             
-            # Clean up tracking
-            if request_id in self.active_workflows:
-                del self.active_workflows[request_id]
+        except Exception as e:
+            logger.error(f"Error completing Query workflow {request_id}: {e}")
     
-    def _handle_query_error(self, request_id: str, error_type: str, error_message: str):
+    def _handle_task_failure(self, request_id: str, task_id: str, result: Dict[str, Any]):
         """
-        Handle errors in query tasks.
+        Handle a task failure.
         
         Args:
-            request_id: The workflow request ID
-            error_type: The type of error
-            error_message: The error message
+            request_id: Workflow request ID
+            task_id: Failed task ID
+            result: Failure result data
         """
-        logger.error(f"Error in workflow {request_id}: {error_type} - {error_message}")
+        # Get slave type from task ID
+        task_parts = task_id.split("_")
+        slave_type = task_parts[-1] if len(task_parts) > 1 else "unknown"
         
-        workflow_json = self.redis.get(f"workflow:{request_id}")
-        if workflow_json:
+        # Get workflow state
+        workflow_state = self.active_workflows.get(request_id, {})
+        
+        # Retrieve workflow from Redis
+        workflow_key = f"workflow:{request_id}"
+        try:
+            workflow_json = self.redis.get(workflow_key)
+            if not workflow_json:
+                logger.error(f"Workflow {request_id} not found in Redis")
+                return
+                
             workflow = json.loads(workflow_json)
             
-            # Mark this domain's step as error
-            for i, step in enumerate(workflow.get("steps", [])):
-                if step.get("domain") == self.domain:
-                    step["status"] = "error"
-                    step["error"] = f"{error_type}: {error_message}"
-                    break
-                    
-            # Add error to workflow
-            workflow["error"] = f"{error_type}: {error_message}"
+            # Add error information to workflow
+            workflow["error"] = f"Query task failed: {result.get('error', 'Unknown error')}"
+            workflow["error_details"] = {
+                "domain": "query",
+                "task": slave_type,
+                "error_type": result.get("error_type", "UnknownError")
+            }
             
-            # Update workflow in Redis
-            self.redis.set(f"workflow:{request_id}", json.dumps(workflow), ex=3600)
-            
-            # Send completion to global master
-            self.redis.publish("global:completions", json.dumps(workflow))
-            
-            # Clean up tracking
-            if request_id in self.active_workflows:
-                del self.active_workflows[request_id]
-                self.active_workflows_gauge.dec()
-            
-            # Update metrics
-            self.workflow_counter.labels(status="error").inc()
+            # Try to handle failures differently based on the task
+            if slave_type == "ontology_mapping":
+                # If ontology mapping fails, we can't meaningfully proceed
+                # Just set empty mapped entities and try to construct a query anyway
+                workflow_state["mapped_entities"] = {
+                    "classes": [],
+                    "properties": [],
+                    "instances": [],
+                    "literals": [],
+                    "unknown": workflow_state.get("entities", {})
+                }
+                
+                self._start_sparql_construction(request_id, workflow_state["mapped_entities"])
+                
+            elif slave_type == "sparql_construction":
+                # If SPARQL construction fails, we can't proceed with query execution
+                # Set an empty SPARQL query and skip validation
+                workflow_state["sparql_query"] = ""
+                workflow_state["validation_result"] = {"valid": False, "errors": ["Query construction failed"]}
+                
+                # Complete the workflow with error state
+                self._complete_query_workflow(request_id)
+                
+            elif slave_type == "validation":
+                # If validation fails, we still have a query, it's just not validated
+                # Proceed to the next domain with the unvalidated query
+                workflow_state["validation_result"] = {"valid": False, "errors": ["Validation failed"]}
+                self._complete_query_workflow(request_id)
+                
+            else:
+                # For unknown task types, just pass the error along
+                self._complete_workflow(workflow, next_domain=None)
+                
+        except Exception as e:
+            logger.error(f"Error handling task failure for {task_id}: {e}")
