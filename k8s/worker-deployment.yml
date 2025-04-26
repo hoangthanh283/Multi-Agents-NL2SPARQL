@@ -27,8 +27,8 @@ spec:
           value: "http://graphdb:7200/repositories/CHeVIE"
         resources:
           requests:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
+            memory: "512Mi"
             cpu: "250m"

@@ -17,7 +17,8 @@ spec:
       containers:
       - name: ray-head
         image: rayproject/ray:latest
-        command: ["ray", "start", "--head", "--port=6379", "--dashboard-host=0.0.0.0"]
+        imagePullPolicy: IfNotPresent
+        command: ["ray", "start", "--head", "--port=6379", "--dashboard-host=0.0.0.0", "--block"]
         ports:
         - containerPort: 6379
           name: gcs
@@ -58,7 +59,8 @@ spec:
       containers:
       - name: ray-worker
         image: rayproject/ray:latest
-        command: ["ray", "start", "--address=ray-head:6379"]
+        imagePullPolicy: IfNotPresent
+        command: ["ray", "start", "--address=ray-head:6379", "--block"]
         resources:
           requests:
             cpu: "0.5"

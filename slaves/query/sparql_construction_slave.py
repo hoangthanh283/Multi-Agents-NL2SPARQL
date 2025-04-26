@@ -4,7 +4,7 @@ from typing import Any, Dict
 from prometheus_client import Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
-from agents.sparql_construction import SparqlConstructionAgent
+from agents.sparql_construction import SPARQLConstructionAgent
 from slaves.base import AbstractSlave
 from utils.logging_utils import setup_logging
 
@@ -13,7 +13,7 @@ logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 class SparqlConstructionSlave(AbstractSlave):
     """
     Slave responsible for constructing SPARQL queries from mapped entities.
-    Wraps the existing SparqlConstructionAgent through an adapter.
+    Wraps the existing SPARQLConstructionAgent through an adapter.
     """
     
     def __init__(self, config: Dict[str, Any] = None):
@@ -27,7 +27,7 @@ class SparqlConstructionSlave(AbstractSlave):
         
         try:
             # Initialize the SPARQL construction agent
-            agent = SparqlConstructionAgent()
+            agent = SPARQLConstructionAgent()
             
             # Wrap the agent with an adapter
             self.agent_adapter = AgentAdapter(

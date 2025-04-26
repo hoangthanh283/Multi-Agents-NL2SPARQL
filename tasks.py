@@ -10,7 +10,7 @@ from agents.ontology_mapping import OntologyMappingAgent
 from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
 from agents.response_generation import ResponseGenerationAgent
-from agents.sparql_construction import SparqlConstructionAgent
+from agents.sparql_construction import SPARQLConstructionAgent
 from agents.sparql_validation import SparqlValidationAgent
 from database.ontology_store import OntologyStore
 
@@ -165,7 +165,7 @@ def query_ontology_mapping(parameters):
 @celery_app.task(name='query.sparql_construction')
 def query_sparql_construction(parameters):
     """Construct SPARQL query using the sparql construction agent"""
-    adapter = AgentAdapter(SparqlConstructionAgent(), "sparql_construction")
+    adapter = AgentAdapter(SPARQLConstructionAgent(), "sparql_construction")
     return adapter.execute_task(parameters)
 
 @celery_app.task(name='query.validation')

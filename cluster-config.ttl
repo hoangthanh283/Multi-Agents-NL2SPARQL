@@ -1,0 +1,10 @@
+# Cluster configuration for GraphDB
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rep: <http://www.ontotext.com/config/repository#> .
+@prefix conf: <http://www.ontotext.com/config/graphdb#> .
+
+[] a conf:GraphDBClusterConfig ;
+    conf:mastersAddresses "" ;
+    conf:clusterID "nl2sparql-cluster" ;
+    conf:workerReplicationFactor 1 ;
+    rdfs:label "Default GraphDB Cluster Config" .

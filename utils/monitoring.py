@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict
 
 import psutil
 import redis
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 
 # Configure logging
 logging.basicConfig(
@@ -16,76 +16,104 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Check if metrics already exist in the registry to avoid duplicate registration
+def safe_counter(name, documentation, labelnames=None):
+    try:
+        if name in REGISTRY._names_to_collectors:
+            return REGISTRY._names_to_collectors[name]
+        return Counter(name, documentation, labelnames or [])
+    except ValueError:
+        # If metric already exists, return the existing one
+        return REGISTRY._names_to_collectors[name]
+
+def safe_gauge(name, documentation, labelnames=None):
+    try:
+        if name in REGISTRY._names_to_collectors:
+            return REGISTRY._names_to_collectors[name]
+        return Gauge(name, documentation, labelnames or [])
+    except ValueError:
+        # If metric already exists, return the existing one
+        return REGISTRY._names_to_collectors[name]
+
+def safe_histogram(name, documentation, labelnames=None):
+    try:
+        if name in REGISTRY._names_to_collectors:
+            return REGISTRY._names_to_collectors[name]
+        return Histogram(name, documentation, labelnames or [])
+    except ValueError:
+        # If metric already exists, return the existing one
+        return REGISTRY._names_to_collectors[name]
+
 # System metrics
-CPU_USAGE = Gauge('system_cpu_usage', 'System CPU usage percentage')
-MEMORY_USAGE = Gauge('system_memory_usage_bytes', 'System memory usage in bytes')
-DISK_USAGE = Gauge('system_disk_usage_bytes', 'System disk usage in bytes')
-NETWORK_IO = Counter('system_network_io_bytes', 'System network IO in bytes', ['direction'])
+CPU_USAGE = safe_gauge('system_cpu_usage', 'System CPU usage percentage')
+MEMORY_USAGE = safe_gauge('system_memory_usage_bytes', 'System memory usage in bytes')
+DISK_USAGE = safe_gauge('system_disk_usage_bytes', 'System disk usage in bytes')
+NETWORK_IO = safe_counter('system_network_io_bytes', 'System network IO in bytes', ['direction'])
 
 # Master-Slave metrics
-WORKFLOW_COUNTER = Counter(
+WORKFLOW_COUNTER = safe_counter(
     'nl2sparql_workflows_total',
     'Total number of NL2SPARQL workflows',
     ['status']
 )
 
-WORKFLOW_PROCESSING_TIME = Histogram(
+WORKFLOW_PROCESSING_TIME = safe_histogram(
     'nl2sparql_workflow_processing_seconds',
     'Time spent processing NL2SPARQL workflows',
     ['domain']
 )
 
-SLAVE_POOL_SIZE = Gauge(
+SLAVE_POOL_SIZE = safe_gauge(
     'slave_pool_size',
     'Number of slaves in a pool',
     ['domain', 'slave_type']
 )
 
-SLAVE_TASKS = Counter(
+SLAVE_TASKS = safe_counter(
     'slave_tasks_total',
     'Total number of tasks processed by slaves',
     ['domain', 'slave_type', 'status']
 )
 
 # Domain Master specific metrics
-DOMAIN_REQUEST_COUNT = Counter(
+DOMAIN_REQUEST_COUNT = safe_counter(
     'domain_requests_total',
     'Total number of requests processed by domain',
     ['domain', 'status']
 )
 
-DOMAIN_PROCESSING_TIME = Histogram(
+DOMAIN_PROCESSING_TIME = safe_histogram(
     'domain_processing_seconds',
     'Time spent processing in domain',
     ['domain', 'task_type']
 )
 
-ACTIVE_WORKFLOWS = Gauge(
+ACTIVE_WORKFLOWS = safe_gauge(
     'active_workflows',
     'Number of active workflows',
     ['domain']
 )
 
-SLAVE_TASK_COUNT = Counter(
+SLAVE_TASK_COUNT = safe_counter(
     'slave_tasks_total',
     'Total number of tasks processed by slaves',
     ['slave_type', 'status']
 )
 
 # Agent metrics
-AGENT_EXECUTION_TIME = Histogram(
+AGENT_EXECUTION_TIME = safe_histogram(
     'agent_execution_seconds',
     'Time spent in agent execution',
     ['agent_type', 'method']
 )
 
-AGENT_ERRORS = Counter(
+AGENT_ERRORS = safe_counter(
     'agent_errors_total',
     'Total number of agent execution errors',
     ['agent_type', 'error_type']
 )
 
-AGENT_MEMORY_USAGE = Gauge(
+AGENT_MEMORY_USAGE = safe_gauge(
     'agent_memory_usage_bytes',
     'Agent memory usage in bytes',
     ['agent_type']
@@ -105,10 +133,10 @@ class SystemMonitor:
         self.update_interval = update_interval
         self.running = False
         self.monitor_thread = None
-        # Prometheus metrics
-        self.cpu_gauge = Gauge('system_cpu_usage', 'System CPU usage percentage')
-        self.memory_gauge = Gauge('system_memory_usage_bytes', 'System memory usage in bytes')
-        self.disk_gauge = Gauge('system_disk_usage_bytes', 'System disk usage in bytes')
+        # Prometheus metrics - use our safe registration functions
+        self.cpu_gauge = safe_gauge('system_cpu_usage', 'System CPU usage percentage')
+        self.memory_gauge = safe_gauge('system_memory_usage_bytes', 'System memory usage in bytes')
+        self.disk_gauge = safe_gauge('system_disk_usage_bytes', 'System disk usage in bytes')
         # Process info
         self.process = psutil.Process(os.getpid())
         self.hostname = os.uname().nodename if hasattr(os, 'uname') else 'unknown'
