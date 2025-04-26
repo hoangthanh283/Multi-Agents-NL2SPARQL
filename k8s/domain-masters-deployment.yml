@@ -33,13 +33,20 @@ spec:
           value: "redis://redis:6379/2"
         - name: GRAPHDB_URL
           value: "http://graphdb:7200/repositories/CHeVIE"
+        - name: QDRANT_URL
+          value: "http://qdrant:6333"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: OPENAI_API_KEY
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
+            memory: "1Gi"
             cpu: "200m"
+          limits:
+            memory: "2Gi"
+            cpu: "500m"
       initContainers:
       - name: domain-init
         image: busybox

@@ -27,10 +27,15 @@ spec:
           value: "http://graphdb:7200/repositories/CHeVIE"
         - name: QDRANT_URL
           value: "http://qdrant:6333"
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: OPENAI_API_KEY
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "2Gi"
+            cpu: "400m"
           limits:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "4Gi"
+            cpu: "1"

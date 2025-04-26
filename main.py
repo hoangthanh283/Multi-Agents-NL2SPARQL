@@ -11,7 +11,7 @@ load_dotenv()
 from tqdm import tqdm
 
 from agents.entity_recognition import EntityRecognitionAgent
-from agents.langchian_master_agent import MasterAgent
+from agents.langchian_master_agent import MasterAgentBase
 from agents.plan_formulation_2 import PlanFormulationAgent
 from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
@@ -80,7 +80,7 @@ def initialize_models():
 
 
 def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
-    master_agent = MasterAgent()
+    master_agent = MasterAgentBase(agent_id="main_master_agent")
     query_refinement_agent = QueryRefinementAgent(
         qdrant_client=qdrant_client,
         embedding_model=bi_encoder

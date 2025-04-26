@@ -68,6 +68,7 @@ kiwisolver==1.4.7
 kombu==5.5.3
 langchain==0.3.24
 langchain-core==0.3.56
+langchain-openai==0.3.14
 langchain-text-splitters==0.3.8
 langsmith==0.3.37
 locket==1.0.0

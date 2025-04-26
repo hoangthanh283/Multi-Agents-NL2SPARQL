@@ -1,6 +1,7 @@
 #!/bin/bash
 # Deployment script for Multi-Agents-NL2SPARQL
 # This script validates code and deploys it to Kubernetes
+# Updated to support both.
 
 set -e  # Exit on error
 
@@ -19,21 +20,59 @@ function check_command() {
   return 0
 }
 
+function detect_ubuntu_version() {
+  # Check if lsb_release is available
+  if command -v lsb_release &> /dev/null; then
+    UBUNTU_VERSION=$(lsb_release -rs)
+    UBUNTU_CODENAME=$(lsb_release -cs)
+    echo "Detected Ubuntu $UBUNTU_VERSION ($UBUNTU_CODENAME)"
+  else
+    # Fallback if lsb_release is not available
+    if [ -f /etc/os-release ]; then
+      . /etc/os-release
+      UBUNTU_VERSION=$VERSION_ID
+      UBUNTU_CODENAME=$UBUNTU_CODENAME
+      echo "Detected Ubuntu $UBUNTU_VERSION ($UBUNTU_CODENAME)"
+    else
+      echo "Unable to detect Ubuntu version, assuming latest compatible."
+      UBUNTU_VERSION="24.04"
+      UBUNTU_CODENAME="noble"
+    fi
+  fi
+}
+
 function install_docker() {
-  echo "Installing Docker on Ubuntu 20.04..."
+  echo "Installing Docker on Ubuntu..."
+  # Update package information
   sudo apt-get update
+  
+  # Install prerequisites
   sudo apt-get install -y \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg \
     lsb-release
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-    $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  
+  # Create keyrings directory if it doesn't exist
+  sudo mkdir -p /etc/apt/keyrings
+  
+  # Add Docker's official GPG key with different methods depending on Ubuntu version
+  if [[ "$UBUNTU_VERSION" == "22.04" ]]; then
+    # Method for Ubuntu 22.04
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  else
+    # Method for Ubuntu 24.04 and newer
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  fi
+  
+  # Update apt package index
   sudo apt-get update
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  
+  # Install Docker Engine, CLI, and containerd
+  sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   
   # Add user to docker group
   sudo usermod -aG docker $USER
@@ -45,35 +84,67 @@ function install_docker() {
 }
 
 function install_kubectl() {
-  echo "Installing kubectl on Ubuntu 20.04..."
+  echo "Installing kubectl on Ubuntu..."
+  
+  # Download the Google Cloud public signing key
+  if [[ "$UBUNTU_VERSION" == "22.04" ]]; then
+    # Method for Ubuntu 22.04
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl
+    sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  else
+    # Method for Ubuntu 24.04 and newer
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  fi
+  
+  # Update apt package index
   sudo apt-get update
-  sudo apt-get install -y apt-transport-https ca-certificates curl
-  sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-  echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-  sudo apt-get update
+  
+  # Install kubectl
   sudo apt-get install -y kubectl
+  
+  echo "kubectl installed successfully"
   kubectl version --client
 }
 
 function install_minikube() {
-  echo "Installing Minikube on Ubuntu 20.04..."
+  echo "Installing Minikube on Ubuntu..."
+  
+  # Download the latest Minikube
   curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+  
+  # Install minikube
   sudo install minikube-linux-amd64 /usr/local/bin/minikube
+  
+  # Remove the installer
   rm minikube-linux-amd64
+  
+  echo "Minikube installed successfully"
   minikube version
 }
 
 function install_helm() {
-  echo "Installing Helm on Ubuntu 20.04..."
+  echo "Installing Helm on Ubuntu..."
+  
+  # Add the Helm signing key
   curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-  sudo apt-get install apt-transport-https --yes
+  
+  # Add the repository
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+  
+  # Update and install
   sudo apt-get update
-  sudo apt-get install helm
+  sudo apt-get install -y helm
+  
+  echo "Helm installed successfully"
+  helm version
 }
 
 function setup_prerequisites() {
-  echo "Setting up prerequisites for Ubuntu 20.04..."
+  echo "Setting up prerequisites for Ubuntu $UBUNTU_VERSION..."
   
   # Check and install Docker if needed
   if ! check_command docker; then
@@ -89,7 +160,7 @@ function setup_prerequisites() {
   fi
   
   # Check Docker service status
-  if ! sudo systemctl is-active --quiet docker; then
+  if ! systemctl is-active --quiet docker; then
     echo "Docker service is not running. Starting it..."
     sudo systemctl start docker
   fi
@@ -123,7 +194,14 @@ function setup_prerequisites() {
     minikube_status=$(minikube status -f '{{.Host}}' 2>/dev/null || echo "Not Running")
     if [ "$minikube_status" != "Running" ]; then
       echo "Minikube is not running. Starting minikube..."
-      minikube start --driver=docker --cpus=2 --memory=4g
+      # Use KVM2 driver if available, otherwise fall back to Docker
+      if command -v virsh &> /dev/null && grep -q 'vmx\|svm' /proc/cpuinfo; then
+        echo "KVM virtualization detected, using KVM2 driver"
+        minikube start --driver=kvm2 --cpus=4 --memory=8g
+      else
+        echo "Using Docker driver"
+        minikube start --driver=docker --cpus=4 --memory=8g
+      fi
     fi
   fi
   
@@ -151,6 +229,9 @@ function wait_for_pods() {
   fi
 }
 
+# Detect Ubuntu version
+detect_ubuntu_version
+
 # Step 0: Check and setup prerequisites
 echo "Step 0: Setting up prerequisites..."
 setup_prerequisites
@@ -177,16 +258,15 @@ docker build -t nl2sparql-worker:latest -f Dockerfile.worker .
 echo "✓ Docker images built successfully!"
 echo
 
-# Ask if user wants to push images to a registry
-read -p "Do you want to push images to a registry? (y/N): " PUSH_IMAGES
-if [[ "$PUSH_IMAGES" =~ ^[Yy]$ ]]; then
-  read -p "Enter your registry (e.g., docker.io/username): " REGISTRY
-  echo "Tagging and pushing images to $REGISTRY..."
-  docker tag nl2sparql-api:latest $REGISTRY/nl2sparql-api:latest
-  docker tag nl2sparql-worker:latest $REGISTRY/nl2sparql-worker:latest
-  docker push $REGISTRY/nl2sparql-api:latest
-  docker push $REGISTRY/nl2sparql-worker:latest
-  echo "✓ Images pushed to registry"
+# Step 2.5: Create Kubernetes Secrets
+echo "Step 2.5: Creating Kubernetes Secrets..."
+if [ -f ".env" ]; then
+  echo "Creating Secret from .env file for OpenAI API key..."
+  kubectl create secret generic openai-api-key --from-env-file=.env --dry-run=client -o yaml | kubectl apply -f -
+  echo "✓ Secret created successfully!"
+else
+  echo "⚠️ Warning: .env file not found. You need to create a Kubernetes Secret manually:"
+  echo "kubectl create secret generic openai-api-key --from-literal=OPENAI_API_KEY=your_api_key_here"
 fi
 echo
 

@@ -19,7 +19,10 @@ from master.global_master import GlobalMaster
 from slaves.slave_pool_manager import SlavePoolManager
 from tasks import (execute_sparql, get_ontology_summary, search_classes,
                    search_instances, search_properties)
-from utils.monitoring import (health_check, metrics_logger, start_monitoring,
+from utils.monitoring import (ACTIVE_WORKFLOWS, DOMAIN_PROCESSING_TIME,
+                              SLAVE_POOL_SIZE, SLAVE_TASK_COUNT,
+                              WORKFLOW_COUNTER, health_check, metrics_logger,
+                              register_health_checks, start_monitoring,
                               stop_monitoring)
 from utils.rate_limiter import circuit_break, rate_limit
 
@@ -149,7 +152,7 @@ async def startup_event():
         # Initialize the slave pool manager with the configured pools
         slave_pool_manager = SlavePoolManager(
             redis_url=redis_url,
-            slave_pool_configs=slave_pool_configs
+            pool_configs=slave_pool_configs
         )
         
         # Start the global master and domain masters
