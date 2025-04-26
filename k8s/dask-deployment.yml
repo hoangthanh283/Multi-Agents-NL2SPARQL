@@ -23,18 +23,18 @@ spec:
           name: dashboard
         resources:
           requests:
-            cpu: "1"
-            memory: "2Gi"
+            cpu: "0.2"
+            memory: "256Mi"
           limits:
-            cpu: "2"
-            memory: "4Gi"
+            cpu: "0.5"
+            memory: "512Mi"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dask-worker
 spec:
-  replicas: 3
+  replicas: 1  # Reduced from 3 to 1 to save resources
   selector:
     matchLabels:
       app: dask-worker
@@ -50,16 +50,16 @@ spec:
         - "dask-worker"
         - "tcp://dask-scheduler:8786"
         - "--nthreads"
-        - "2"
+        - "1"  # Reduced from 2 to 1
         - "--memory-limit"
-        - "4GB"
+        - "512MB"  # Reduced from 4GB to 512MB
         resources:
           requests:
-            cpu: "2"
-            memory: "4Gi"
+            cpu: "0.2"
+            memory: "256Mi"
           limits:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "0.5"
+            memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service

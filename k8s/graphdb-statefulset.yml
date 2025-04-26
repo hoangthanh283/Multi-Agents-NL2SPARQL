@@ -4,7 +4,7 @@ metadata:
   name: graphdb
 spec:
   serviceName: graphdb
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: graphdb
@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: graphdb
-        image: ontotext/graphdb:10.0.0
+        image: ontotext/graphdb:10.6.4
         ports:
         - containerPort: 7200
           name: http
@@ -30,16 +30,16 @@ spec:
           mountPath: /opt/graphdb/logs
         env:
         - name: GDB_JAVA_OPTS
-          value: "-Xmx4g -Xms2g"
+          value: "-Xmx1500m -Xms512m"
         - name: GDB_HEAP_SIZE
-          value: "4g"
+          value: "1500m"
         resources:
           requests:
-            cpu: "2"
-            memory: "4Gi"
+            cpu: "0.5"
+            memory: "1Gi"
           limits:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "1"
+            memory: "2Gi"
         readinessProbe:
           httpGet:
             path: /protocol

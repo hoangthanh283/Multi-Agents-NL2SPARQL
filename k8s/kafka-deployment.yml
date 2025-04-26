@@ -4,7 +4,7 @@ metadata:
   name: kafka
 spec:
   serviceName: kafka
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: kafka
@@ -42,11 +42,11 @@ spec:
               fieldPath: metadata.name
         resources:
           requests:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "100m"
           limits:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "512Mi"
+            cpu: "250m"
         volumeMounts:
         - name: kafka-data
           mountPath: /var/lib/kafka/data
@@ -79,7 +79,7 @@ metadata:
   name: zookeeper
 spec:
   serviceName: zookeeper
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: zookeeper
@@ -109,11 +109,11 @@ spec:
               fieldPath: metadata.name
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "128Mi"
+            cpu: "100m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "200m"
         volumeMounts:
         - name: zookeeper-data
           mountPath: /var/lib/zookeeper/data

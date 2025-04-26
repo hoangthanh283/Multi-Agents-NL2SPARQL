@@ -27,11 +27,11 @@ spec:
           name: client
         resources:
           requests:
-            cpu: "2"
-            memory: "4Gi"
+            cpu: "0.5"
+            memory: "512Mi"
           limits:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "1"
+            memory: "1Gi"
         volumeMounts:
         - name: ray-temp
           mountPath: /tmp/ray
@@ -44,7 +44,7 @@ kind: Deployment
 metadata:
   name: ray-worker
 spec:
-  replicas: 3
+  replicas: 1  # Reduced from 3 to 1
   selector:
     matchLabels:
       app: ray
@@ -61,11 +61,11 @@ spec:
         command: ["ray", "start", "--address=ray-head:6379"]
         resources:
           requests:
-            cpu: "2"
-            memory: "4Gi"
+            cpu: "0.5"
+            memory: "512Mi"
           limits:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "1"
+            memory: "1Gi"
         volumeMounts:
         - name: ray-temp
           mountPath: /tmp/ray

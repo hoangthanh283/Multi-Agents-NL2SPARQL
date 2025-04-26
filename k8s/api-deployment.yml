@@ -6,7 +6,7 @@ metadata:
     app: nl2sparql-api
     component: global-master
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: nl2sparql-api
@@ -35,8 +35,8 @@ spec:
           value: "global_master"
         resources:
           requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
             memory: "256Mi"
             cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"

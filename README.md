@@ -104,7 +104,7 @@ services:
     restart: unless-stopped
 
   graphdb:
-    image: ontotext/graphdb:10.6.0
+    image: ontotext/graphdb:10.6.4
     ports:
       - "7200:7200"
     environment:
