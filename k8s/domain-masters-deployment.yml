@@ -17,6 +17,7 @@ spec:
       containers:
       - name: domain-master
         image: nl2sparql-api:latest
+        imagePullPolicy: IfNotPresent  # Use local image if available
         env:
         - name: ROLE
           value: "domain_master"
@@ -34,10 +35,10 @@ spec:
           value: "http://graphdb:7200/repositories/CHeVIE"
         resources:
           requests:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
+            memory: "512Mi"
             cpu: "200m"
       initContainers:
       - name: domain-init

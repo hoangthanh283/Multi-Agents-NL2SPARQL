@@ -15,6 +15,7 @@ spec:
       containers:
       - name: worker
         image: nl2sparql-worker:latest
+        imagePullPolicy: IfNotPresent  # Use local image if available
         env:
         - name: REDIS_URL
           value: "redis://redis:6379/0"
