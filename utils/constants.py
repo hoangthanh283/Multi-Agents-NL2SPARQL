@@ -13,3 +13,6 @@ class QdrantCollections(Enum):
 VECTOR_SIMILARITY_THRESHOLD = os.getenv("VECTOR_SIMILARITY_THRESHOLD", 0.25)
 TOP_K_DRANT_QUERIES = os.getenv("TOP_K_DRANT_QUERIES", 2)
 QDRANT_SEARCH_THRESHOLD = os.getenv("QDRANT_SEARCH_THRESHOLD", 0.5)
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHEVIE_ONTOLOGY_PATH = os.path.join(PROJECT_ROOT, "data", "ontologies", "CHeVIE_comment.owl")

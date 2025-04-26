@@ -1,0 +1,3009 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="https://CHeVIE.vn/ontologies/"
+     xml:base="https://CHeVIE.vn/ontologies/"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:core="http://purl.org/vocab/frbr/core#"
+     xmlns:foaf="http://xmlns.com/foaf/0.1/"
+     xmlns:prov="http://www.w3.org/ns/prov#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+     xmlns:time="http://www.w3.org/2006/time#"
+     xmlns:terms="http://purl.org/dc/terms/"
+     xmlns:wgs84_pos="http://www.w3.org/2003/01/geo/wgs84_pos#"
+     xmlns:ontologies="https://CHeVIE.vn/ontologies/">
+    <owl:Ontology rdf:about="https://CHeVIE.vn/ontologies/">
+        <owl:imports rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <owl:imports rdf:resource="http://www.w3.org/2006/time#2016"/>
+        <terms:license rdf:resource="https://creativecommons.org/licenses/by/4.0/"/>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/date -->
+
+    <owl:AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/date"/>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/description -->
+
+    <owl:AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/description"/>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/title -->
+
+    <owl:AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/title"/>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#alt -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#alt">
+        <rdfs:comment>The WGS84 altitude of a SpatialThing (decimal meters 
+above the local reference ellipsoid).</rdfs:comment>
+        <rdfs:label>altitude</rdfs:label>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#lat -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#lat">
+        <rdfs:comment>The WGS84 latitude of a SpatialThing (decimal degrees).</rdfs:comment>
+        <rdfs:label>latitude</rdfs:label>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#location -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#location">
+        <rdfs:subPropertyOf rdf:resource="http://xmlns.com/foaf/0.1/based_near"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#long -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#long">
+        <rdfs:comment>The WGS84 longitude of a SpatialThing (decimal degrees).</rdfs:comment>
+        <rdfs:label>longitude</rdfs:label>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#altLabel -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#altLabel"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#definition -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#definition"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#editorialNote -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#editorialNote"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#historyNote -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#historyNote"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#narrower -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#narrower">
+        <rdfs:label>skos:broader</rdfs:label>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#note -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#note"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#prefLabel -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#prefLabel"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#related -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#related"/>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#scopeNote -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#scopeNote"/>
+    
+
+
+    <!-- http://www.w3.org/ns/prov#wasDerivedFrom -->
+
+    <owl:AnnotationProperty rdf:about="http://www.w3.org/ns/prov#wasDerivedFrom"/>
+    
+
+
+    <!-- http://xmlns.com/foaf/0.1/based_near -->
+
+    <owl:AnnotationProperty rdf:about="http://xmlns.com/foaf/0.1/based_near"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/academicDegree -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/academicDegree">
+    	<rdfs:label xml:lang="en">Academic Degree</rdfs:label>
+    	<rdfs:label xml:lang="vi">Học vị</rdfs:label>
+    	<rdfs:comment xml:lang="en">An annotation property that specifies the academic degree(s) attained by a person. This property connects a Person to a Statement describing their academic qualifications.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Thuộc tính chú thích xác định học vị học thuật mà một người đạt được. Thuộc tính này kết nối một Người với một Phát biểu mô tả trình độ học vấn của họ.</rdfs:comment>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+	<!-- https://CHeVIE.vn/ontologies/birthDate -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/birthDate">
+	    <rdfs:label xml:lang="en">birth date</rdfs:label>
+	    <rdfs:label xml:lang="vi">ngày sinh</rdfs:label>
+	    <rdfs:comment xml:lang="en">Specifies the date of birth of a person. This property connects a Person to a Statement containing birth date information.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Xác định ngày sinh của một người. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin ngày sinh.</rdfs:comment>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+	</owl:AnnotationProperty>
+
+	<!-- https://CHeVIE.vn/ontologies/birthPlace -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/birthPlace">
+	    <rdfs:label xml:lang="en">birth place</rdfs:label>
+	    <rdfs:label xml:lang="vi">nơi sinh</rdfs:label>
+	    <rdfs:comment xml:lang="en">Indicates the location where a person was born. This property links a Person to a Statement containing birth place information.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Chỉ ra địa điểm nơi một người được sinh ra. Thuộc tính này liên kết một Person (Người) với một Statement (Báo cáo) chứa thông tin về nơi sinh.</rdfs:comment>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+	</owl:AnnotationProperty>
+
+	<!-- https://CHeVIE.vn/ontologies/broaderDivision -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/broaderDivision">
+	    <rdfs:label xml:lang="en">broader division</rdfs:label>
+	    <rdfs:label xml:lang="vi">đơn vị hành chính cấp trên</rdfs:label>
+	    <rdfs:comment xml:lang="en">Represents the hierarchical relationship between administrative divisions, indicating a larger administrative unit that contains the current one. This property connects an AdministrativeDivision to a Statement containing information about its parent division.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Biểu thị mối quan hệ phân cấp giữa các đơn vị hành chính, chỉ ra một đơn vị hành chính lớn hơn chứa đơn vị hiện tại. Thuộc tính này kết nối một AdministrativeDivision (Đơn vị hành chính) với một Statement (Báo cáo) chứa thông tin về đơn vị hành chính cấp trên của nó.</rdfs:comment>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+	</owl:AnnotationProperty>
+
+	<!-- https://CHeVIE.vn/ontologies/broaderPeriod -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/broaderPeriod">
+	    <rdfs:label xml:lang="en">broader period</rdfs:label>
+	    <rdfs:label xml:lang="vi">thời kỳ bao quát</rdfs:label>
+	    <rdfs:comment xml:lang="en">Indicates a more general time period that encompasses the current period. Similar to the SKOS broader concept but specialized for temporal relationships. This property connects a Period to a Statement containing information about its parent period.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Chỉ ra một thời kỳ tổng quát hơn bao gồm thời kỳ hiện tại. Tương tự như khái niệm broader trong SKOS nhưng được chuyên biệt hóa cho các mối quan hệ thời gian. Thuộc tính này kết nối một Period (Thời kỳ) với một Statement (Báo cáo) chứa thông tin về thời kỳ bao quát nó.</rdfs:comment>
+	    <rdfs:seeAlso>https://www.w3.org/TR/skos-reference/#broader</rdfs:seeAlso>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+	</owl:AnnotationProperty>
+
+	<!-- https://CHeVIE.vn/ontologies/brother -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/brother">
+	    <rdfs:label xml:lang="en">brother</rdfs:label>
+	    <rdfs:label xml:lang="vi">anh em trai</rdfs:label>
+	    <rdfs:comment xml:lang="en">Represents a familial relationship indicating a male sibling. This property connects a Person to a Statement containing information about their brother.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Biểu thị mối quan hệ gia đình chỉ ra một người anh em trai. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về người anh em trai của họ.</rdfs:comment>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+	</owl:AnnotationProperty>
+
+	<!-- https://CHeVIE.vn/ontologies/brotherInLaw -->
+	<owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/brotherInLaw">
+	    <rdfs:label xml:lang="en">brother-in-law</rdfs:label>
+	    <rdfs:label xml:lang="vi">anh/em rể</rdfs:label>
+	    <rdfs:comment xml:lang="en">Represents a familial relationship by marriage, referring to the brother of one's spouse or the husband of one's sibling. This property connects a Person to a Statement containing information about their brother-in-law.</rdfs:comment>
+	    <rdfs:comment xml:lang="vi">Biểu thị mối quan hệ gia đình thông qua hôn nhân, đề cập đến anh/em trai của vợ/chồng hoặc chồng của chị/em gái. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về người anh/em rể của họ.</rdfs:comment>
+	    <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+	    <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+	</owl:AnnotationProperty>
+    
+    <!-- https://CHeVIE.vn/ontologies/builtBy -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/builtBy">
+        <rdfs:label xml:lang="en">Built By</rdfs:label>
+    	<rdfs:label xml:lang="vi">Được xây dựng bởi</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the person, organization, or entity responsible for constructing or building a Site. This property connects a Site to a Statement containing information about its builder.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định người, tổ chức hoặc thực thể chịu trách nhiệm xây dựng một Địa điểm. Thuộc tính này kết nối một Địa điểm với một Phát biểu chứa thông tin về người xây dựng nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/builtDate -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/builtDate">
+        <rdfs:label xml:lang="en">Built Date</rdfs:label>
+    	<rdfs:label xml:lang="vi">Ngày xây dựng</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the date or time period when a Site was constructed. This property links a Site to a Statement describing when it was built.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra ngày hoặc thời gian khi một Địa điểm được xây dựng. Thuộc tính này liên kết một Địa điểm với một Phát biểu mô tả thời điểm nó được xây dựng.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/builtIn -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/builtIn">
+        <rdfs:label xml:lang="en">Built In</rdfs:label>
+    	<rdfs:label xml:lang="vi">Được xây dựng tại</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the location where a Site was built. This property connects a Site to a Statement containing information about its construction location.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định vị trí nơi một Địa điểm được xây dựng. Thuộc tính này kết nối một Địa điểm với một Phát biểu chứa thông tin về vị trí xây dựng của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/buriedPlace -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/buriedPlace">
+        <rdfs:label xml:lang="en">Buried Place</rdfs:label>
+    	<rdfs:label xml:lang="vi">Nơi an táng</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the location where a Person was buried or interred. This property connects a Person to a Statement describing their burial location.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra vị trí nơi một Người được chôn cất hoặc an táng. Thuộc tính này kết nối một Người với một Phát biểu mô tả địa điểm an táng của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/child -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/child">
+        <rdfs:label xml:lang="en">Child</rdfs:label>
+    	<rdfs:label xml:lang="vi">Con</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies a child relationship between people. This property connects a Person to a Statement describing their child or children.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định mối quan hệ con cái giữa những người. Thuộc tính này kết nối một Người với một Phát biểu mô tả con hoặc các con của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/commemorate -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/commemorate">
+        <rdfs:label xml:lang="en">Commemorate</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tưởng niệm</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates what person, event, or concept a Site commemorates or honors. This property connects a Site to a Statement describing what it was built to remember or honor.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra người, sự kiện hoặc khái niệm mà một Địa điểm tưởng niệm hoặc tôn vinh. Thuộc tính này kết nối một Địa điểm với một Phát biểu mô tả những gì nó được xây dựng để ghi nhớ hoặc tôn vinh.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/country -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/country">
+        <rdfs:label xml:lang="en">Country</rdfs:label>
+    	<rdfs:label xml:lang="vi">Quốc gia</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the country to which an administrative division belongs. This property connects an Administrative Division to a Statement containing information about its country.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định quốc gia mà một đơn vị hành chính thuộc về. Thuộc tính này kết nối một Đơn vị Hành chính với một Phát biểu chứa thông tin về quốc gia của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/deathDate -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/deathDate">
+         <rdfs:label xml:lang="en">Death Date</rdfs:label>
+    	<rdfs:label xml:lang="vi">Ngày mất</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the date when a Person died. This property connects a Person to a Statement containing information about their date of death.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định ngày một Người qua đời. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về ngày mất của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/deathPlace -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/deathPlace">
+        <rdfs:label xml:lang="en">Death Place</rdfs:label>
+    	<rdfs:label xml:lang="vi">Nơi mất</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the location where a Person died. This property connects a Person to a Statement describing the place of their death.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra địa điểm nơi một Người qua đời. Thuộc tính này kết nối một Người với một Phát biểu mô tả nơi họ mất.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/description -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/description"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/end -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/end">
+        <rdfs:label xml:lang="en">end</rdfs:label>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ethnicity -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/ethnicity">
+        <rdfs:label xml:lang="en">Ethnicity</rdfs:label>
+    	<rdfs:label xml:lang="vi">Dân tộc</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the ethnic group or background of a Person. This property connects a Person to a Statement containing information about their ethnicity.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định nhóm dân tộc hoặc nguồn gốc của một Người. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về dân tộc của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/eventPlace -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/eventPlace">
+        <rdfs:label xml:lang="en">Event Place</rdfs:label>
+    	<rdfs:label xml:lang="vi">Địa điểm sự kiện</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the location where a Historic Event took place. This property connects a Historic Event to a Statement describing its location.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra địa điểm nơi một Sự kiện Lịch sử diễn ra. Thuộc tính này kết nối một Sự kiện Lịch sử với một Phát biểu mô tả vị trí của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/father -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/father">
+        <rdfs:label xml:lang="en">Father</rdfs:label>
+    	<rdfs:label xml:lang="vi">Cha</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the father of a Person. This property connects a Person to a Statement containing information about their father.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định người cha của một Người. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về cha của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/festivalCommemorateEvent -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/festivalCommemorateEvent">
+        <rdfs:label xml:lang="en">Festival Commemorates Event</rdfs:label>
+    	<rdfs:label xml:lang="vi">Lễ hội tưởng niệm sự kiện</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates which historical event a Festival commemorates. This property connects a Festival to a Statement describing the historical event it celebrates or honors.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra sự kiện lịch sử mà một Lễ hội tưởng niệm. Thuộc tính này kết nối một Lễ hội với một Phát biểu mô tả sự kiện lịch sử mà nó kỷ niệm hoặc tôn vinh.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/festivalCommemorateHistoricalFigure -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/festivalCommemorateHistoricalFigure">
+        <rdfs:label xml:lang="en">Festival Commemorates Historical Figure</rdfs:label>
+    	<rdfs:label xml:lang="vi">Lễ hội tưởng niệm nhân vật lịch sử</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates which historical figure a Festival commemorates. This property connects a Festival to a Statement describing the historical person it celebrates or honors.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra nhân vật lịch sử mà một Lễ hội tưởng niệm. Thuộc tính này kết nối một Lễ hội với một Phát biểu mô tả nhân vật lịch sử mà nó kỷ niệm hoặc tôn vinh.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/festivalOccurOver -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/festivalOccurOver">
+        <rdfs:label xml:lang="en">Festival Duration</rdfs:label>
+    	<rdfs:label xml:lang="vi">Thời gian diễn ra lễ hội</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the duration or time period over which a Festival takes place. This property connects a Festival to a Statement describing how long it lasts.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định khoảng thời gian diễn ra của một Lễ hội. Thuộc tính này kết nối một Lễ hội với một Phát biểu mô tả thời gian kéo dài của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/festivalPlace -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/festivalPlace">
+        <rdfs:label xml:lang="en">Festival Location</rdfs:label>
+    	<rdfs:label xml:lang="vi">Địa điểm lễ hội</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the location where a Festival is celebrated or held. This property connects a Festival to a Statement describing its location.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra địa điểm nơi một Lễ hội được tổ chức. Thuộc tính này kết nối một Lễ hội với một Phát biểu mô tả vị trí của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/festivalTime -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/festivalTime">
+        <rdfs:label xml:lang="en">Festival Time</rdfs:label>
+    	<rdfs:label xml:lang="vi">Thời gian lễ hội</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the date or time when a Festival is celebrated. This property connects a Festival to a Statement describing when it takes place.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định ngày hoặc thời điểm khi một Lễ hội được tổ chức. Thuộc tính này kết nối một Lễ hội với một Phát biểu mô tả thời điểm diễn ra của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/formedIn -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/formedIn">
+        <rdfs:label xml:lang="en">Formed In</rdfs:label>
+    	<rdfs:label xml:lang="vi">Được thành lập vào</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the date or period when a Country was formed or established. This property connects a Country to a Statement describing its formation date.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định ngày hoặc thời kỳ khi một Quốc gia được thành lập. Thuộc tính này kết nối một Quốc gia với một Phát biểu mô tả ngày thành lập của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Country"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/founderOfDynasty -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/founderOfDynasty">
+        <rdfs:label xml:lang="en">Founder of Dynasty</rdfs:label>
+    	<rdfs:label xml:lang="vi">Người sáng lập triều đại</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates that a Person is the founder of a dynasty. This property connects a Person to a Statement containing information about the dynasty they established.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra rằng một Người là người sáng lập một triều đại. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về triều đại mà họ đã thành lập.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/getAcademicDegreeIn -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/getAcademicDegreeIn">
+        <rdfs:label xml:lang="en">Academic Degree Field</rdfs:label>
+    	<rdfs:label xml:lang="vi">Lĩnh vực học thuật</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the field or subject in which an Academic Degree was obtained. This property connects an Academic Degree to a Statement describing its field of study.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định lĩnh vực hoặc môn học mà một Học vị được cấp. Thuộc tính này kết nối một Học vị với một Phát biểu mô tả lĩnh vực học thuật của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/hasAdministrativeDivision -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/hasAdministrativeDivision">
+        <rdfs:label xml:lang="en">Has Administrative Division</rdfs:label>
+    	<rdfs:label xml:lang="vi">Có đơn vị hành chính</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the administrative divisions (such as provinces, states, etc.) that belong to a Country. This property connects a Country to a Statement listing its administrative divisions.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định các đơn vị hành chính (như tỉnh, thành phố, v.v.) thuộc về một Quốc gia. Thuộc tính này kết nối một Quốc gia với một Phát biểu liệt kê các đơn vị hành chính của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Country"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/hasFestival -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/hasFestival">
+        <rdfs:label xml:lang="en">Has Festival</rdfs:label>
+    	<rdfs:label xml:lang="vi">Có lễ hội</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates that a Site hosts or is associated with a Festival. This property connects a Site to a Statement describing festivals that take place there.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra rằng một Địa điểm tổ chức hoặc liên quan đến một Lễ hội. Thuộc tính này kết nối một Địa điểm với một Phát biểu mô tả các lễ hội diễn ra tại đó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/holdingInterval -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/holdingInterval">
+        <rdfs:label xml:lang="en">Position Holding Period</rdfs:label>
+    	<rdfs:label xml:lang="vi">Thời gian giữ chức vụ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the time period during which a Position Title was held by someone. This property connects a Position Title to a Statement describing the duration it was held.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định khoảng thời gian mà một Chức vụ được nắm giữ bởi ai đó. Thuộc tính này kết nối một Chức vụ với một Phát biểu mô tả thời gian nó được giữ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/knownAsDivision -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/knownAsDivision">
+        <rdfs:label xml:lang="en">Known as Division</rdfs:label>
+    	<rdfs:label xml:lang="vi">Được biết đến như đơn vị hành chính</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies alternative names or designations by which an Administrative Division has been known. This property connects an Administrative Division to a Statement containing information about its alternative names.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định các tên gọi hoặc cách gọi khác mà một Đơn vị Hành chính được biết đến. Thuộc tính này kết nối một Đơn vị Hành chính với một Phát biểu chứa thông tin về tên gọi thay thế của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/liveIn -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/liveIn">
+        <rdfs:label xml:lang="en">Lives In</rdfs:label>
+    	<rdfs:label xml:lang="vi">Sống tại</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the place where a Person lives or has lived. This property connects a Person to a Statement describing their place of residence.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra nơi một Người đang sống hoặc đã từng sống. Thuộc tính này kết nối một Người với một Phát biểu mô tả nơi cư trú của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/marriedTo -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/marriedTo">
+        <rdfs:label xml:lang="en">Married To</rdfs:label>
+    	<rdfs:label xml:lang="vi">Kết hôn với</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies a marriage relationship between people. This property connects a Person to a Statement containing information about their spouse or marriage.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định mối quan hệ hôn nhân giữa những người. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về vợ/chồng hoặc cuộc hôn nhân của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/mother -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/mother">
+        <rdfs:label xml:lang="en">Mother</rdfs:label>
+    	<rdfs:label xml:lang="vi">Mẹ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the mother of a Person. This property connects a Person to a Statement containing information about their mother.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định người mẹ của một Người. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về mẹ của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/narrowerDivision -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/narrowerDivision">
+        <rdfs:label xml:lang="en">Narrower Division</rdfs:label>
+    	<rdfs:label xml:lang="vi">Đơn vị hành chính nhỏ hơn</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates smaller administrative divisions contained within a larger Administrative Division. This property connects an Administrative Division to a Statement describing its constituent subdivisions.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra các đơn vị hành chính nhỏ hơn nằm trong một Đơn vị Hành chính lớn hơn. Thuộc tính này kết nối một Đơn vị Hành chính với một Phát biểu mô tả các đơn vị hành chính con của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/narrowerPeriod -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/narrowerPeriod">
+        <rdfs:label xml:lang="en">Narrower Period</rdfs:label>
+    	<rdfs:label xml:lang="vi">Giai đoạn nhỏ hơn</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies smaller time periods contained within a larger Period. This property connects a Period to a Statement describing its sub-periods, following the SKOS narrower concept relation pattern.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định các khoảng thời gian nhỏ hơn nằm trong một Giai đoạn lớn hơn. Thuộc tính này kết nối một Giai đoạn với một Phát biểu mô tả các giai đoạn con của nó, theo mẫu quan hệ khái niệm hẹp hơn của SKOS.</rdfs:comment>
+    	<rdfs:seeAlso>https://www.w3.org/TR/skos-reference/#narrower</rdfs:seeAlso>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/parent -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/parent">
+        <rdfs:label xml:lang="en">Parent</rdfs:label>
+    	<rdfs:label xml:lang="vi">Cha mẹ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies a parent relationship between people. This property connects a Person to a Statement containing information about their parent(s).</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định mối quan hệ cha mẹ giữa những người. Thuộc tính này kết nối một Người với một Phát biểu chứa thông tin về cha mẹ của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/positionTitle -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/positionTitle">
+        <rdfs:label xml:lang="en">Position Title</rdfs:label>
+    	<rdfs:label xml:lang="vi">Chức vụ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies an official position or title held by a Person. This property connects a Person to a Statement describing positions or titles they have held.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định vị trí chính thức hoặc chức vụ được nắm giữ bởi một Người. Thuộc tính này kết nối một Người với một Phát biểu mô tả các vị trí hoặc chức danh mà họ đã giữ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/predecessor -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/predecessor"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/relatedToEthnic -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/relatedToEthnic">
+        <rdfs:label xml:lang="en">related to ethnic</rdfs:label>
+    	<rdfs:label xml:lang="vi">liên quan đến dân tộc</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a relationship between a festival and a specific ethnic background or cultural tradition. This property connects a Festival to a Statement containing information about its ethnic associations.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra mối quan hệ giữa một lễ hội và một nền văn hóa dân tộc cụ thể. Thuộc tính này kết nối một Festival (Lễ hội) với một Statement (Báo cáo) chứa thông tin về liên kết dân tộc của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/relatedToEthnicGroup -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/relatedToEthnicGroup">
+        <rdfs:label xml:lang="en">related to ethnic group</rdfs:label>
+    	<rdfs:label xml:lang="vi">liên quan đến nhóm dân tộc</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies a connection between a festival and a formal ethnic group or community. This is more specific than relatedToEthnic, referring to defined ethnic groups rather than general ethnic characteristics. This property connects a Festival to a Statement containing information about the ethnic groups associated with it.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định mối liên hệ giữa một lễ hội và một nhóm hoặc cộng đồng dân tộc chính thức. Thuộc tính này cụ thể hơn relatedToEthnic, đề cập đến các nhóm dân tộc được định nghĩa rõ ràng thay vì đặc điểm dân tộc chung. Thuộc tính này kết nối một Festival (Lễ hội) với một Statement (Báo cáo) chứa thông tin về các nhóm dân tộc liên quan.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/relatedToReligion -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/relatedToReligion">
+        <rdfs:label xml:lang="en">related to religion</rdfs:label>
+    	<rdfs:label xml:lang="vi">liên quan đến tôn giáo</rdfs:label>
+    	<rdfs:comment xml:lang="en">Identifies a relationship between a festival and a specific religious tradition, practice, or belief system. This property connects a Festival to a Statement containing information about its religious associations.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định mối quan hệ giữa một lễ hội và một truyền thống, thực hành hoặc hệ thống tín ngưỡng tôn giáo cụ thể. Thuộc tính này kết nối một Festival (Lễ hội) với một Statement (Báo cáo) chứa thông tin về các liên kết tôn giáo của nó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/religion -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/religion">
+        <rdfs:label xml:lang="en">religion</rdfs:label>
+    	<rdfs:label xml:lang="vi">tôn giáo</rdfs:label>
+    	<rdfs:comment xml:lang="en">Specifies the religious affiliation, belief system, or spiritual tradition of a person. This property connects a Person to a Statement containing information about their religious background.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Xác định sự liên kết tôn giáo, hệ thống niềm tin, hoặc truyền thống tâm linh của một người. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về nền tảng tôn giáo của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/siblings -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/siblings">
+        <rdfs:label xml:lang="en">siblings</rdfs:label>
+    	<rdfs:label xml:lang="vi">anh chị em ruột</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents the familial relationship between people who share at least one parent. This property connects a Person to a Statement containing information about their siblings, regardless of gender.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Biểu thị mối quan hệ gia đình giữa những người có chung ít nhất một cha hoặc mẹ. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về anh chị em ruột của họ, không phân biệt giới tính.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/similarAcademicDegree -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/similarAcademicDegree">
+        <rdfs:label xml:lang="en">similar academic degree</rdfs:label>
+    	<rdfs:label xml:lang="vi">học vị tương đương</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates academic degrees that are considered equivalent or comparable across different educational systems or time periods. This property connects an AcademicDegree to a Statement containing information about similar degrees.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra các học vị được coi là tương đương hoặc có thể so sánh được giữa các hệ thống giáo dục hoặc thời kỳ khác nhau. Thuộc tính này kết nối một AcademicDegree (Học vị) với một Statement (Báo cáo) chứa thông tin về các học vị tương tự.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/similarPositionTitle -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/similarPositionTitle">
+        <rdfs:label xml:lang="en">similar position title</rdfs:label>
+    	<rdfs:label xml:lang="vi">chức danh tương đương</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates position titles that are considered equivalent or comparable across different organizations, industries, or time periods. This property connects a PositionTitle to a Statement containing information about similar position titles.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra các chức danh vị trí được coi là tương đương hoặc có thể so sánh được giữa các tổ chức, ngành nghề, hoặc thời kỳ khác nhau. Thuộc tính này kết nối một PositionTitle (Chức danh vị trí) với một Statement (Báo cáo) chứa thông tin về các chức danh tương tự.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/sister -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/sister">
+        <rdfs:label xml:lang="en">sister</rdfs:label>
+    	<rdfs:label xml:lang="vi">chị/em gái</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a familial relationship where one person is the sister of another. This property connects a Person to a Statement containing information about the sister relationship.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra mối quan hệ gia đình khi một người là chị/em gái của người khác. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về mối quan hệ chị/em gái.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/sisterInLaw -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/sisterInLaw">
+        <rdfs:label xml:lang="en">sister-in-law</rdfs:label>
+    	<rdfs:label xml:lang="vi">chị/em dâu</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a familial relationship where one person is the sister-in-law of another. This property connects a Person to a Statement containing information about the sister-in-law relationship.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra mối quan hệ gia đình khi một người là chị/em dâu của người khác. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về mối quan hệ chị/em dâu.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/siteCommemorateEvent -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/siteCommemorateEvent">
+        <rdfs:label xml:lang="en">site commemorate event</rdfs:label>
+    	<rdfs:label xml:lang="vi">sự kiện kỷ niệm tại địa điểm</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates an event commemorated at a particular site. This property connects a Site to a Statement containing information about the event commemorated at that site.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra một sự kiện được tổ chức để kỷ niệm tại một địa điểm cụ thể. Thuộc tính này kết nối một Site (Địa điểm) với một Statement (Báo cáo) chứa thông tin về sự kiện được kỷ niệm tại địa điểm đó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/siteLevel -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/siteLevel">
+        <rdfs:label xml:lang="en">site level</rdfs:label>
+    	<rdfs:label xml:lang="vi">cấp độ địa điểm</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the level or tier of a site, such as national, regional, or local. This property connects a Site to a Statement containing information about the level of the site.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra cấp độ hoặc tầng bậc của một địa điểm, ví dụ như quốc gia, khu vực hoặc địa phương. Thuộc tính này kết nối một Site (Địa điểm) với một Statement (Báo cáo) chứa thông tin về cấp độ của địa điểm đó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/sitePlace -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/sitePlace">
+        <rdfs:label xml:lang="en">site place</rdfs:label>
+    	<rdfs:label xml:lang="vi">địa điểm của khu vực</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the place where a site is located. This property connects a Site to a Statement containing information about the place of the site.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra địa điểm nơi một khu vực hay địa điểm được đặt. Thuộc tính này kết nối một Site (Địa điểm) với một Statement (Báo cáo) chứa thông tin về vị trí của địa điểm đó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/son -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/son">
+        <rdfs:label xml:lang="en">son</rdfs:label>
+    	<rdfs:label xml:lang="vi">con trai</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a familial relationship where one person is the son of another. This property connects a Person to a Statement containing information about the son relationship.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra mối quan hệ gia đình khi một người là con trai của người khác. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về mối quan hệ con trai.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/span -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/span">
+        <rdfs:label xml:lang="en">span</rdfs:label>
+    	<rdfs:label xml:lang="vi">thời gian kéo dài</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the span or duration of a period. This property connects a Period to a Statement containing information about the span of time.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra khoảng thời gian hoặc độ dài của một khoảng thời gian. Thuộc tính này kết nối một Period (Thời kỳ) với một Statement (Báo cáo) chứa thông tin về thời gian kéo dài.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/start -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/start">
+        <rdfs:label xml:lang="en">start</rdfs:label>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/studyAt -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/studyAt">
+        <rdfs:label xml:lang="en">study at</rdfs:label>
+    	<rdfs:label xml:lang="vi">học tại</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates the institution where a person studied. This property connects a Person to a Statement containing information about the institution they studied at.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra tổ chức hoặc cơ sở giáo dục nơi một người đã học. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về tổ chức mà họ học tại đó.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/successor -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/successor"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/takePartIn -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/takePartIn">
+        <rdfs:label xml:lang="en">take part in</rdfs:label>
+    	<rdfs:label xml:lang="vi">tham gia vào</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a person's participation in an event or activity. This property connects a Person to a Statement containing information about their participation.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra sự tham gia của một người vào một sự kiện hoặc hoạt động. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về sự tham gia của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/talent -->
+
+    <owl:AnnotationProperty rdf:about="https://CHeVIE.vn/ontologies/talent">
+        <rdfs:label xml:lang="en">talent</rdfs:label>
+    	<rdfs:label xml:lang="vi">tài năng</rdfs:label>
+    	<rdfs:comment xml:lang="en">Indicates a person's talent or skill. This property connects a Person to a Statement containing information about their talent.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Chỉ ra tài năng hoặc kỹ năng của một người. Thuộc tính này kết nối một Person (Người) với một Statement (Báo cáo) chứa thông tin về tài năng của họ.</rdfs:comment>
+    	<rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+    	<rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:AnnotationProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/subject -->
+
+    <owl:ObjectProperty rdf:about="http://purl.org/dc/elements/1.1/subject"/>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#location -->
+
+    <owl:ObjectProperty rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#location"/>
+    
+
+
+    <!-- http://www.w3.org/2006/time#hasEnd -->
+
+    <owl:ObjectProperty rdf:about="http://www.w3.org/2006/time#hasEnd"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_academicDegree -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_academicDegree">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_birthDate -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_birthDate">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_birthPlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_birthPlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_broaderDivision -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_broaderDivision">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+        <rdfs:seeAlso rdf:resource="http://rdfs.co/juso/parent"/>
+        <rdfs:seeAlso rdf:resource="http://rdfs.co/juso/within"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_broaderPeriod -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_broaderPeriod">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_brother -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_brother">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_brotherInLaw -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_brotherInLaw">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_builtBy -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_builtBy">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_builtDate -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_builtDate">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_builtIn -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_builtIn">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_buriedPlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_buriedPlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_commemorate -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_commemorate">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_country -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_country">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Country"/>
+        <rdfs:seeAlso rdf:resource="http://rdfs.co/juso/country"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_deathDate -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_deathDate">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_deathPlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_deathPlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_end -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_end">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_ethnicity -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_ethnicity">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Ethnic"/>
+        <rdfs:seeAlso rdf:resource="https://dbpedia.org/ontology/ethnicity"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_eventPlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_eventPlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_father -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_father">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_festivalCommemorateEvent -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_festivalCommemorateEvent">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_festivalCommemorateHistoricalFigure -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_festivalCommemorateHistoricalFigure">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_festivalOccurOver -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_festivalOccurOver">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Interval"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_festivalPlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_festivalPlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_formedIn -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_formedIn">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_founderOfDynasty -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_founderOfDynasty">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+        <rdfs:comment>This property links a person to the dynasty they founded.</rdfs:comment>
+        <rdfs:label>founder of Dynasty</rdfs:label>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_getAcademicDegreeIn -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_getAcademicDegreeIn">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_hasAdministrativeDivision -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_hasAdministrativeDivision">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_hasFestival -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_hasFestival">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_holdingInterval -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_holdingInterval">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Interval"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_knownAsDivision -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_knownAsDivision">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_liveIn -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_liveIn">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_mother -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_mother">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_narrowerDivision -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_narrowerDivision">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_narrowerPeriod -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_narrowerPeriod">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Period"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_parent -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_parent">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_positionTitle -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_positionTitle">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_relatedToEthnic -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_relatedToEthnic">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Ethnic"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_relatedToEthnicGroup -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_relatedToEthnicGroup">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Ethnic"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_relatedToReligion -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_relatedToReligion">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_religion -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_religion">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_siblings -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_siblings">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_similarAcademicDegree -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_similarAcademicDegree">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_similarPositionTitle -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_similarPositionTitle">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_sister -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_sister">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_sisterInLaw -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_sisterInLaw">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_siteCommemorateEvent -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_siteCommemorateEvent">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_siteLevel -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_siteLevel">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/SiteLevel"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_sitePlace -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_sitePlace">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/AdministrativeDivision"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_son -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_son">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_span -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_span">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Interval"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_start -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_start">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_studyAt -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_studyAt">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/School"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_takePartIn -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_takePartIn">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_talent -->
+
+    <owl:ObjectProperty rdf:about="https://CHeVIE.vn/ontologies/_talent">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="https://CHeVIE.vn/ontologies/Talent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/_description -->
+
+    <owl:DatatypeProperty rdf:about="https://CHeVIE.vn/ontologies/_description">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/referenceURL -->
+
+    <owl:DatatypeProperty rdf:about="https://CHeVIE.vn/ontologies/referenceURL">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#anyURI"/>
+        <rdfs:seeAlso rdf:resource="http://www.wikidata.org/prop/reference/P854"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/retrieved -->
+
+    <owl:DatatypeProperty rdf:about="https://CHeVIE.vn/ontologies/retrieved">
+        <rdfs:domain rdf:resource="https://CHeVIE.vn/ontologies/Reference"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+        <rdfs:seeAlso rdf:resource="http://www.wikidata.org/prop/reference/P813"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.w3.org/2002/07/owl#DataProperty -->
+
+    <owl:Class rdf:about="http://www.w3.org/2002/07/owl#DataProperty"/>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#Point -->
+
+    <owl:Class rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#Point">
+        <rdfs:subClassOf rdf:resource="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing"/>
+        <rdfs:comment> 
+Uniquely identified by lat/long/alt. i.e.
+
+spaciallyIntersects(P1, P2) :- lat(P1, LAT), long(P1, LONG), alt(P1, ALT),
+  lat(P2, LAT), long(P2, LONG), alt(P2, ALT).
+
+sameThing(P1, P2) :- type(P1, Point), type(P2, Point), spaciallyIntersects(P1, P2).
+  </rdfs:comment>
+        <rdfs:comment>A point, typically described using a coordinate system relative to Earth, such as WGS84.
+  </rdfs:comment>
+        <rdfs:label>point</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing -->
+
+    <owl:Class rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#SpatialThing">
+        <rdfs:comment>Anything with spatial extent, i.e. size, shape, or position.
+ e.g. people, places, bowling balls, as well as abstract areas like cubes.
+</rdfs:comment>
+        <rdfs:label>SpatialThing</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- http://www.w3.org/2006/time#TRS -->
+
+    <owl:Class rdf:about="http://www.w3.org/2006/time#TRS"/>
+    
+
+
+    <!-- http://www.w3.org/2006/time#TemporalDuration -->
+
+    <owl:Class rdf:about="http://www.w3.org/2006/time#TemporalDuration"/>
+    
+
+
+    <!-- http://www.w3.org/2006/time#TimeZone -->
+
+    <owl:Class rdf:about="http://www.w3.org/2006/time#TimeZone"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/AbroadFestival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/AbroadFestival">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+        <rdfs:label xml:lang="en">AbroadFestival</rdfs:label>
+        <rdfs:label xml:lang="vi">Lễ hội du nhập từ nước ngoài</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/AcademicDegree -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/AcademicDegree">
+        <rdfs:label xml:lang="en">EducationDegreeTitle</rdfs:label>
+        <rdfs:label xml:lang="vi">Học vị</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/AdministrativeDivision -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/AdministrativeDivision">
+        <rdfs:label xml:lang="en">AdministrativeDivision</rdfs:label>
+        <rdfs:label xml:lang="vi">Đơn vị hành chính</rdfs:label>
+        <rdfs:seeAlso rdf:resource="http://rdfs.co/juso/AdministrativeDivision"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Am -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Am">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Am</rdfs:label>
+        <rdfs:label xml:lang="vi">Am</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ArchaeologicalSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ArchaeologicalSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+        <rdfs:label xml:lang="en">ArchaeologicalHistoricalSite</rdfs:label>
+        <rdfs:label xml:lang="vi">Di tích khảo cổ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ArtArchitectureSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ArtArchitectureSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+        <rdfs:label xml:lang="en">ArtArchitectureHistoricalSite</rdfs:label>
+        <rdfs:label xml:lang="vi">Di tích kiến trúc nghệ thuật</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/AssociateProfessor -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/AssociateProfessor">
+        <rdfs:label xml:lang="en">Associate Professor</rdfs:label>
+       	<rdfs:label xml:lang="vi">Phó Giáo Sư</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents an academic degree held by an individual who holds the position of associate professor. This class is a subclass of AcademicDegree, indicating that it is a type of academic qualification.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị của một cá nhân nắm giữ chức vụ Phó Giáo Sư. Lớp này là một phân lớp của AcademicDegree, cho thấy đây là một loại bằng cấp học thuật.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Baccalaureate -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Baccalaureate">
+        <rdfs:label xml:lang="en">Baccalaureate</rdfs:label>
+    	<rdfs:label xml:lang="vi">Bằng Cử Nhân</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents an academic degree awarded upon completion of undergraduate studies, commonly referred to as a bachelor's degree. This class is a subclass of AcademicDegree.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị cấp bằng sau khi hoàn thành chương trình đại học, thường được gọi là bằng Cử Nhân. Lớp này là một phân lớp của AcademicDegree.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Bachelor -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Bachelor">
+        <rdfs:label xml:lang="en">Bachelor</rdfs:label>
+    	<rdfs:label xml:lang="vi">Cử Nhân</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a bachelor's degree, an undergraduate academic degree awarded by universities or colleges upon completion of a course of study. This class is a subclass of AcademicDegree.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho bằng Cử Nhân, một học vị đại học cấp cho sinh viên sau khi hoàn thành khóa học tại các trường đại học hoặc cao đẳng. Lớp này là một phân lớp của AcademicDegree.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/BoChinh -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/BoChinh">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Bố chính</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/BocXa -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/BocXa">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Bộc xạ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/BuddhistTemple -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/BuddhistTemple">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">BuddhistTemple</rdfs:label>
+        <rdfs:label xml:lang="vi">Chùa</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/CapSu -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/CapSu">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Cấp sự</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Chancellery -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Chancellery">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="en">Chancellery</rdfs:label>
+        <rdfs:label xml:lang="vi">Tể tướng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ChauMuc -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ChauMuc">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Châu mục</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ChiHau -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ChiHau">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Chi hậu</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ChiHuySu -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ChiHuySu">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Chỉ huy sứ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/CitadelArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/CitadelArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ArtArchitectureSite"/>
+        <rdfs:label xml:lang="en">CitadelArchitecture</rdfs:label>
+        <rdfs:label xml:lang="vi">Kiến trúc thành quách</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Colleges -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Colleges">
+        <rdfs:label xml:lang="en">Colleges</rdfs:label>
+    	<rdfs:label xml:lang="vi">Cao Đẳng</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents colleges as a category within academic qualifications, typically referring to institutions that provide undergraduate and sometimes graduate education. This class is a subclass of AcademicDegree.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho các trường Cao Đẳng trong hệ thống học vấn, thường chỉ các cơ sở giáo dục cung cấp chương trình đào tạo đại học và đôi khi là sau đại học. Lớp này là một phân lớp của AcademicDegree.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/CommunalVillageHouse -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/CommunalVillageHouse">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">CommunalVillageHouse</rdfs:label>
+        <rdfs:label xml:lang="vi">Đình</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Country -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Country">
+        <rdfs:label xml:lang="en">Country</rdfs:label>
+        <rdfs:label xml:lang="vi">Tên đất nước</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DaiHocSi -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DaiHocSi">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đại học sĩ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DaiLyTu -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DaiLyTu">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đại lý tự</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DaiPhu -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DaiPhu">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đại phụ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DaiTuong -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DaiTuong">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đại tướng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DeDoc -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DeDoc">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đề đốc</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DeLinh -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DeLinh">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đề lĩnh</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Dien -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Dien">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Điện</rdfs:label>
+        <rdfs:label xml:lang="vi">Điện</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DinhUy -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DinhUy">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đình úy</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DiploticEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DiploticEvent">
+        <rdfs:label xml:lang="en">Diplomatic Event</rdfs:label>
+    	<rdfs:label xml:lang="vi">Sự Kiện Ngoại Giao</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents historical events that are related to international relations, such as treaties, negotiations, summits, or other significant diplomatic occurrences. This class is a subclass of HistoricEvent, indicating that it is a type of historical event.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho các sự kiện lịch sử liên quan đến quan hệ quốc tế, như các hiệp ước, đàm phán, hội nghị thượng đỉnh, hoặc các sự kiện ngoại giao quan trọng khác. Lớp này là một phân lớp của HistoricEvent, cho thấy nó là một loại sự kiện lịch sử.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DoDoc -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DoDoc">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đô đốc</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DocBinh -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DocBinh">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đốc binh</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DocDong -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DocDong">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đốc đồng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DocThi -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DocThi">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Đốc thị</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/DuDuc -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/DuDuc">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Dụ đức</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/EconomicEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/EconomicEvent">
+        <rdfs:label xml:lang="en">Economic Event</rdfs:label>
+    	<rdfs:label xml:lang="vi">Sự Kiện Kinh Tế</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents historical events related to economic activities, including market changes, financial crises, or major economic reforms. This class is a subclass of HistoricEvent, indicating that it is a type of historical event.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho các sự kiện lịch sử liên quan đến các hoạt động kinh tế, bao gồm thay đổi thị trường, khủng hoảng tài chính, hoặc các cải cách kinh tế lớn. Lớp này là một phân lớp của HistoricEvent, cho thấy nó là một loại sự kiện lịch sử.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Engineer -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Engineer">
+        <rdfs:label xml:lang="en">Engineer</rdfs:label>
+    	<rdfs:label xml:lang="vi">Kỹ Sư</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents an academic or professional degree in engineering, indicating an individual who has completed engineering studies or holds a qualification in the engineering field. This class is a subclass of AcademicDegree.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị hoặc bằng cấp chuyên môn trong ngành kỹ thuật, chỉ ra một cá nhân đã hoàn thành chương trình học về kỹ thuật hoặc có bằng cấp trong lĩnh vực kỹ thuật. Lớp này là một phân lớp của AcademicDegree.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Ethnic -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Ethnic">
+        <rdfs:label xml:lang="vi">Dân tộc</rdfs:label>
+        <rdfs:label xml:lang="en">Ethnic</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Festival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Festival">
+        <rdfs:label xml:lang="en">Festival</rdfs:label>
+        <rdfs:label xml:lang="vi">Lễ hội</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/FolkArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/FolkArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ArtArchitectureSite"/>
+        <rdfs:label xml:lang="en">FolkArchitecture</rdfs:label>
+        <rdfs:label xml:lang="vi">Kiến trúc dân gian</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/HighSchool -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/HighSchool">
+        <rdfs:label xml:lang="en">High School</rdfs:label>
+    	<rdfs:label xml:lang="vi">Trung Học Phổ Thông</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a high school academic qualification, typically awarded after the completion of secondary education. This class is a subclass of AcademicDegree, indicating it is a type of academic qualification.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị trung học phổ thông, thường được cấp sau khi hoàn thành chương trình giáo dục trung học. Lớp này là một phân lớp của AcademicDegree, cho thấy đây là một loại học vị trong hệ thống học thuật.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/HistoricEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/HistoricEvent">
+        <rdfs:label xml:lang="en">HistoricEvent</rdfs:label>
+        <rdfs:label xml:lang="vi">Sự kiện lịch sử</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/HistoricalCulturalSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/HistoricalCulturalSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+        <rdfs:label xml:lang="en">CulturalHistoricalSite</rdfs:label>
+        <rdfs:label xml:lang="vi">Di tích lịch sử văn hóa</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/HistoricalFigure -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/HistoricalFigure">
+        <rdfs:label xml:lang="en">Historical Figure</rdfs:label>
+    	<rdfs:label xml:lang="vi">Nhân Vật Lịch Sử</rdfs:label>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Person"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/HuongCong -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/HuongCong">
+        <rdfs:label xml:lang="en">Huong Cong</rdfs:label>
+    	<rdfs:label xml:lang="vi">Hương Công</rdfs:label>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Intermediate -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Intermediate">
+        <rdfs:label xml:lang="en">Intermediate</rdfs:label>
+    	<rdfs:label xml:lang="vi">Trung Cấp</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents an intermediate level of academic qualification, typically awarded after completing some form of secondary education, but before achieving higher education degrees. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho một học vị trình độ trung cấp, thường được cấp sau khi hoàn thành một phần của giáo dục trung học, nhưng trước khi đạt được các bằng cấp cao hơn. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/JuniorHighSchool -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/JuniorHighSchool">
+        <rdfs:label xml:lang="en">Junior High School</rdfs:label>
+    	<rdfs:label xml:lang="vi">Trung Học Cơ Sở</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a junior high school academic qualification, typically awarded after completing lower secondary education, often considered a level of education before high school. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị trung học cơ sở, thường được cấp sau khi hoàn thành giáo dục trung học cơ sở, thường được coi là một trình độ giáo dục trước khi vào trung học phổ thông. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/King -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/King">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Vua</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/LandscapeAndArchitecturalWorkSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/LandscapeAndArchitecturalWorkSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/LandscapeSite"/>
+        <rdfs:label xml:lang="vi">Cảnh quan, địa điểm</rdfs:label>
+        <rdfs:label xml:lang="en">Landscape-Place</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/LandscapeGardenArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/LandscapeGardenArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ArtArchitectureSite"/>
+        <rdfs:label xml:lang="vi">Kiến trúc vườn cảnh</rdfs:label>
+        <rdfs:label xml:lang="en">LandscapeArchitecture</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/LandscapeSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/LandscapeSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+        <rdfs:label xml:lang="vi">Di tích thắng cảnh</rdfs:label>
+        <rdfs:label xml:lang="en">ScenicHistoricalSites</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Master -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Master">
+        <rdfs:label xml:lang="en">Master</rdfs:label>
+    	<rdfs:label xml:lang="vi">Thạc Sĩ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a master's degree, typically awarded after completing a graduate-level program in a specific academic or professional field. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị thạc sĩ, thường được cấp sau khi hoàn thành chương trình học bậc sau đại học trong một lĩnh vực học thuật hoặc chuyên môn cụ thể. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/MilitaryEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/MilitaryEvent">
+        <rdfs:label xml:lang="en">Military Event</rdfs:label>
+    	<rdfs:label xml:lang="vi">Sự Kiện Quân Sự</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents historical events related to military actions, such as battles, wars, or military campaigns. This class is a subclass of 'HistoricEvent', indicating that it is a type of historical event.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho các sự kiện lịch sử liên quan đến các hành động quân sự, chẳng hạn như trận đánh, chiến tranh, hoặc các chiến dịch quân sự. Lớp này là một phân lớp của 'HistoricEvent', cho thấy đây là một loại sự kiện lịch sử.</rdfs:comment>
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/NaturalAreaSite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/NaturalAreaSite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/LandscapeSite"/>
+        <rdfs:label xml:lang="vi">Khu vực thiên nhiên</rdfs:label>
+        <rdfs:label xml:lang="en">NaturalArea</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/NaturalTalent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/NaturalTalent">
+        <rdfs:label xml:lang="en">NaturalTalent</rdfs:label>
+        <rdfs:label xml:lang="vi">Tài năng thiên bẩm</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Nghe -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Nghe">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Nghè</rdfs:label>
+        <rdfs:label xml:lang="vi">Nghè</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/OtherFestival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/OtherFestival">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+        <rdfs:label xml:lang="vi">Lễ hội khác</rdfs:label>
+        <rdfs:label xml:lang="en">Other Festival</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/OtherVietNamReligiousArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/OtherVietNamReligiousArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Các kiến trúc di tích lịch sử khác</rdfs:label>
+        <rdfs:label xml:lang="en">OtherVietNamReligiousArchitecture</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/PalaceArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/PalaceArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ArtArchitectureSite"/>
+        <rdfs:label xml:lang="vi">Kiến trúc cung điện - dinh thự</rdfs:label>
+        <rdfs:label xml:lang="en">PalaceMansionArchitecture</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Period -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Period">
+        <rdfs:label xml:lang="en">Period</rdfs:label>
+        <rdfs:label xml:lang="vi">Thời kỳ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Person -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Person">
+        <rdfs:label xml:lang="vi">Con người</rdfs:label>
+        <rdfs:label xml:lang="en">Person</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/PhD -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/PhD">
+    	<rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+        <rdfs:label xml:lang="en">PhD</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tiến Sĩ</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a Doctor of Philosophy (PhD) degree, typically awarded after completing advanced graduate studies and research in a specific academic field. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị Tiến Sĩ (PhD), thường được cấp sau khi hoàn thành nghiên cứu và học tập sau đại học trong một lĩnh vực học thuật cụ thể. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/PhoBang -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/PhoBang">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+        <rdfs:label xml:lang="en">PhoBang</rdfs:label>
+    	<rdfs:label xml:lang="vi">Phó Bảng</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a specific academic degree, potentially a cultural or professional qualification. The exact nature of this degree may vary depending on the educational or professional context. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho một học vị cụ thể, có thể là một bằng cấp văn hóa hoặc chuyên môn. Tính chất chính xác của học vị này có thể thay đổi tùy thuộc vào ngữ cảnh giáo dục hoặc nghề nghiệp. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Phu -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Phu">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Phủ</rdfs:label>
+        <rdfs:label xml:lang="vi">Phủ</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/PoliticalEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/PoliticalEvent">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricEvent"/>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/PositionTitle -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/PositionTitle">
+        <rdfs:label xml:lang="vi">Chức vụ</rdfs:label>
+        <rdfs:label xml:lang="en">PositionTitle</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Primary -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Primary">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+        <rdfs:label xml:lang="en">Primary</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tiểu Học</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a primary education level degree, typically awarded after completing foundational schooling. This class is a subclass of 'AcademicDegree'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho học vị cấp tiểu học, thường được cấp sau khi hoàn thành việc học cơ bản. Lớp này là một phân lớp của 'AcademicDegree'.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Prince -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Prince">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="en">Prince</rdfs:label>
+    	<rdfs:label xml:lang="vi">Hoàng Tử</rdfs:label>
+    	<rdfs:comment xml:lang="en">Represents a title or position of a prince, typically associated with royal or noble families. This class is a subclass of 'PositionTitle'.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Đại diện cho danh hiệu hoặc vị trí của một hoàng tử, thường liên quan đến các gia đình hoàng gia hoặc quý tộc. Lớp này là một phân lớp của 'PositionTitle'.</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Princess -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Princess">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="en">Princess</rdfs:label>
+    	<rdfs:label xml:lang="vi">Công chúa</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Professor -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Professor">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/AcademicDegree"/>
+        <rdfs:label xml:lang="en">Professor</rdfs:label>
+    	<rdfs:label xml:lang="vi">Giáo Sư</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Quan -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Quan">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Quán</rdfs:label>
+        <rdfs:label xml:lang="vi">Quán</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Queen -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Queen">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/PositionTitle"/>
+        <rdfs:label xml:lang="vi">Nữ hoàng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Reference -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Reference"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Religion -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Religion">
+        <rdfs:label xml:lang="en">Religion</rdfs:label>
+        <rdfs:label xml:lang="vi">Tôn giáo/ tín ngưỡng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ReligiousArchitecture -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ReligiousArchitecture">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ArtArchitectureSite"/>
+        <rdfs:label xml:lang="vi">Kiến trúc văn hóa nghệ thuật lịch sử</rdfs:label>
+        <rdfs:label xml:lang="en">ReligiousArchitecture</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ReligiousFestival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/ReligiousFestival">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+        <rdfs:label xml:lang="en">Religious Festival</rdfs:label>
+    	<rdfs:label xml:lang="vi">Lễ Hội Tôn Giáo</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/RevolutionHistoryFestival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/RevolutionHistoryFestival">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+        <rdfs:label xml:lang="en">Revolution History Festival</rdfs:label>
+    	<rdfs:label xml:lang="vi">Lễ Hội Lịch Sử Cách Mạng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/RevolutionarySite -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/RevolutionarySite">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Site"/>
+        <rdfs:label xml:lang="vi">Di tích lịch sử cách mạng</rdfs:label>
+        <rdfs:label xml:lang="en">RevolutionaryHistoricalSite</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/School -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/School">
+        <rdfs:label xml:lang="en">School</rdfs:label>
+        <rdfs:label xml:lang="vi">Trường học</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Shrine -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Shrine">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="vi">Miếu</rdfs:label>
+        <rdfs:label xml:lang="en">Shrine</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Site -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Site">
+        <rdfs:label xml:lang="vi">Di tích lịch sử</rdfs:label>
+        <rdfs:label xml:lang="en">HeritageSite</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/SiteAttachedToHistoricalEvent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/SiteAttachedToHistoricalEvent">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricalCulturalSite"/>
+        <rdfs:label xml:lang="en">AttachedToHistoricalEvent</rdfs:label>
+        <rdfs:label xml:lang="vi">Liên quan tới hoặc có gắn với sự kiện lịch sử</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/SiteAttachedToHistoricalFigure -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/SiteAttachedToHistoricalFigure">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricalCulturalSite"/>
+        <rdfs:label xml:lang="en">AttachedToHistoricalFigure</rdfs:label>
+        <rdfs:label xml:lang="vi">Gắn liề với nhân vật lịch sử</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/SiteAttachedToRevolutionsAndResistance -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/SiteAttachedToRevolutionsAndResistance">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/HistoricalCulturalSite"/>
+        <rdfs:label xml:lang="en">AttachedToRevolutionsAndResistance</rdfs:label>
+        <rdfs:label xml:lang="vi">Gắn liền với cách mạng</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/SiteLevel -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/SiteLevel">
+        <rdfs:label xml:lang="vi">Cấp độ di tích lịch sử việt nam</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Statement -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Statement"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Talent -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Talent"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Temple -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/Temple">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/ReligiousArchitecture"/>
+        <rdfs:label xml:lang="en">Temple</rdfs:label>
+        <rdfs:label xml:lang="vi">Đền</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TraditionalFestival -->
+
+    <owl:Class rdf:about="https://CHeVIE.vn/ontologies/TraditionalFestival">
+        <rdfs:subClassOf rdf:resource="https://CHeVIE.vn/ontologies/Festival"/>
+        <rdfs:label xml:lang="en">Traditional Festival</rdfs:label> 
+        <rdfs:label xml:lang="vi">Lễ hội truyền thống</rdfs:label>
+    </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.w3.org/2006/time#hasDateTimeDescription -->
+
+    <owl:NamedIndividual rdf:about="http://www.w3.org/2006/time#hasDateTimeDescription"/>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Academics -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Academics">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Archery -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Archery">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Art -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Art">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Articulate -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Articulate">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Buddhism -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Buddhism">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Caodaism -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Caodaism">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Catholicism -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Catholicism">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Christianity -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Christianity">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Communication -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Communication">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Financial -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Financial">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/FolkReligion -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/FolkReligion">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/GregorianCalendar -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/GregorianCalendar">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#TRS"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Hoahaoism -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Hoahaoism">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Horsing -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Horsing">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Humor -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Humor">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Leadership -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Leadership">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Legal -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Legal">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Literature -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Literature">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Logistics -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Logistics">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/LunarCalendar -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/LunarCalendar">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#TRS"/>
+        <rdfs:seeAlso>https://dbpedia.org/page/Lunar_calendar</rdfs:seeAlso>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Math -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Math">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/MilitaryManagement -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/MilitaryManagement">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Music -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Music">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/NationalLevel -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/NationalLevel">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/SiteLevel"/>
+        <rdfs:label xml:lang="vi">Di tích quốc gia</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Negotiating -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Negotiating">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/NormalLevel -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/NormalLevel">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologiesSiteLevel"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/OtherReligion -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/OtherReligion">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Planning -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Planning">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Poetry -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Poetry">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Protestantism -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Protestantism">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Religion"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/ProvincialLevel -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/ProvincialLevel">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/SiteLevel"/>
+        <rdfs:label xml:lang="vi">Di tích cấp tỉnh</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/QuangTrung -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/QuangTrung">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/HistoricalFigure"/>
+        <deathDate rdf:resource="https://CHeVIE.vn/ontologies/QuangTrungDateOfDeathStatement"/>
+        <rdfs:label xml:lang="en">Quang Trung</rdfs:label>
+    	<rdfs:label xml:lang="vi">Quang Trung</rdfs:label>
+    	<rdfs:comment xml:lang="en">Quang Trung was a historical figure and the ruler of Vietnam, known for his leadership during the Tây Sơn Rebellion.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Quang Trung là một nhân vật lịch sử và là người lãnh đạo của Việt Nam, nổi tiếng với vai trò lãnh đạo trong cuộc khởi nghĩa Tây Sơn.</rdfs:comment>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/QuangTrungDeathDate -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/QuangTrungDeathDate">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#Instant"/>
+        <time:hasTRS rdf:resource="https://CHeVIE.vn/ontologies/LunarCalendar"/>
+        <time:inDateTime rdf:resource="https://CHeVIE.vn/ontologies/QuangTrungDeathDateTimeDescription"/>
+        <time:day rdf:datatype="http://www.w3.org/2001/XMLSchema#gDay">29</time:day>
+        <time:month rdf:datatype="http://www.w3.org/2001/XMLSchema#gMonth">07</time:month>
+        <time:year rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">1792</time:year>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/QuangTrungDeathDateReference -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/QuangTrungDeathDateReference">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Reference"/>
+        <referenceURL>https://vi.wikipedia.org/wiki/Quang_Trung</referenceURL>
+        <retrieved rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2022-10-10T00:00:00Z</retrieved>
+        <rdfs:label xml:lang="en">Quang Trung's Death Date</rdfs:label>
+    	<rdfs:label xml:lang="vi">Ngày mất Quang Trung</rdfs:label>
+    	<rdfs:comment xml:lang="en">The death date of Quang Trung, according to the Lunar calendar. The date is represented in the form of day, month, and year.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Ngày mất của Quang Trung, theo lịch âm. Ngày này được biểu thị dưới dạng ngày, tháng, và năm.</rdfs:comment>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/QuangTrungDeathDateStatement -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/QuangTrungDeathDateStatement">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <_deathDate rdf:resource="https://CHeVIE.vn/ontologies/QuangTrungDeathDate"/>
+        <prov:wasDerivedFrom rdf:resource="https://CHeVIE.vn/ontologies/QuangTrungDeathDateReference"/>
+        <rdfs:label xml:lang="en">Statement about Quang Trung's Death Date</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tuyên bố về ngày mất Quang Trung</rdfs:label>
+    	<rdfs:comment xml:lang="en">A statement about the death date of Quang Trung, sourced from a reference and linked to the death date individual.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Một tuyên bố về ngày mất của Quang Trung, được lấy từ một nguồn tham khảo và liên kết với cá nhân ngày mất.</rdfs:comment>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/QuangTrungDeathDateTimeDescription -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/QuangTrungDeathDateTimeDescription">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#DateTimeDescription"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/SepcialNationalLevel -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/SepcialNationalLevel">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/SiteLevel"/>
+        <rdfs:label xml:lang="vi">Di tích quốc gia đặc biệt</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Shooting -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Shooting">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Swimming -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Swimming">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Taming -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Taming">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Taxes -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Taxes">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Teaching -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Teaching">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDate -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDate">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#Instant"/>
+        <time:inDateTime rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDateDescription"/>
+        <rdfs:label xml:lang="en">End Date of Triệu Ruling Dynasty</rdfs:label>
+    	<rdfs:label xml:lang="vi">Ngày kết thúc triều đại Triệu</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDateDescription -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDateDescription">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#DateTimeDescription"/>
+        <time:hasTRS rdf:resource="https://CHeVIE.vn/ontologies/GregorianCalendar"/>
+        <time:year rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-110</time:year>
+        <rdfs:label xml:lang="en">End Date of Triệu Ruling Dynasty Description</rdfs:label>
+    	<rdfs:label xml:lang="vi">Mô tả ngày kết thúc triều đại Triệu</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDateStatement -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDateStatement">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <_end rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyEndDate"/>
+        <prov:wasDerivedFrom rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyPeriodReference"/>
+        <rdfs:label xml:lang="en">Statement about End Date of Triệu Ruling Dynasty</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tuyên bố về ngày kết thúc triều đại Triệu</rdfs:label>
+    	<rdfs:comment xml:lang="en">A statement about the end date of the Triệu ruling dynasty, with reference to historical data.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Một tuyên bố về ngày kết thúc triều đại Triệu, dựa trên dữ liệu lịch sử.</rdfs:comment>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyPeriodReference -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyPeriodReference">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Reference"/>
+        <referenceURL>https://vi.wikipedia.org/wiki/Nhà_Triệu</referenceURL>
+        <retrieved rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2022-10-10T00:00:00Z</retrieved>
+        <rdfs:label xml:lang="en">Triệu Ruling Dynasty Period Reference</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tham khảo về thời kỳ triều đại Triệu</rdfs:label>
+    	<rdfs:comment xml:lang="en">A reference to the historical period of the Triệu ruling dynasty, sourced from Wikipedia.</rdfs:comment>
+    	<rdfs:comment xml:lang="vi">Một tham khảo về thời kỳ triều đại Triệu, lấy từ Wikipedia.</rdfs:comment>
+    	<rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Reference"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDate -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDate">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#Instant"/>
+        <time:inDateTime rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDateDescription"/>
+        <rdfs:label xml:lang="en">Start Date of Triệu Ruling Dynasty</rdfs:label>
+    	<rdfs:label xml:lang="vi">Ngày bắt đầu triều đại Triệu</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDateDescription -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDateDescription">
+        <rdf:type rdf:resource="http://www.w3.org/2006/time#DateTimeDescription"/>
+        <time:hasTRS rdf:resource="https://CHeVIE.vn/ontologies/GregorianCalendar"/>
+        <time:year rdf:datatype="http://www.w3.org/2001/XMLSchema#gYear">-210</time:year>
+        <rdfs:label xml:lang="en">Start Date of Triệu Ruling Dynasty Description</rdfs:label>
+    	<rdfs:label xml:lang="vi">Mô tả ngày bắt đầu triều đại Triệu</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDateStatement -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDateStatement">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/Statement"/>
+        <_start rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyStartDate"/>
+        <prov:wasDerivedFrom rdf:resource="https://CHeVIE.vn/ontologies/TrieuRulingDynastyPeriodReference"/>
+        <rdfs:label xml:lang="en">Statement about Start Date of Triệu Ruling Dynasty</rdfs:label>
+    	<rdfs:label xml:lang="vi">Tuyên bố về ngày bắt đầu triều đại Triệu</rdfs:label>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Wisdom -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Wisdom">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- https://CHeVIE.vn/ontologies/Writing -->
+
+    <owl:NamedIndividual rdf:about="https://CHeVIE.vn/ontologies/Writing">
+        <rdf:type rdf:resource="https://CHeVIE.vn/ontologies/NaturalTalent"/>
+    </owl:NamedIndividual>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotations
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <rdf:Description rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#">
+        <dc:date>$Date: 2009/04/20 15:00:30 $</dc:date>
+        <dc:description>A vocabulary for representing latitude, longitude and 
+ altitude information in the WGS84 geodetic reference datum. 
+ Version $Id: wgs84_pos.rdf,v 1.22 2009/04/20 15:00:30 timbl Exp $. See http://www.w3.org/2003/01/geo/ for more details.</dc:description>
+        <dc:title>WGS84 Geo Positioning: an RDF vocabulary</dc:title>
+        <rdfs:comment>
+Recent changes to this namespace:
+$Log: wgs84_pos.rdf,v $
+Revision 1.22  2009/04/20 15:00:30  timbl
+Remove the time bits which have been deal with elsewhere eg in iCal.
+
+Revision 1.21  2009/04/20 12:52:47  timbl
+try again
+
+Revision 1.20  2009/04/20 12:42:11  timbl
+Add Event (edited ages ago and never checked in), and location (following discussion http://chatlogs.planetrdf.com/swig/2009-04-20#T12-36-09)
+
+Revision 1.19  2009/04/20 12:36:31  timbl
+Add Event (edited ages ago and never checked in), and location (following discussion http://chatlogs.planetrdf.com/swig/2009-04-20#T12-36-09)
+
+Revision 1.18  2006/02/01 22:01:04  danbri
+Clarified that lat and long are decimal degrees, and that alt is decimal metres about local reference ellipsoid
+
+Revision 1.17  2004/02/06 17:38:12  danbri
+Fixed a bad commit screwup
+
+Revision 1.15  2003/04/19 11:24:08  danbri
+Fixed the typo even more.
+
+Revision 1.14  2003/04/19 11:16:56  danbri
+fixed a typo
+
+Revision 1.13  2003/02/19 22:27:27  connolly
+relaxed domain constraints on lat/long/alt from Point to SpatialThing
+
+Revision 1.12  2003/01/12 01:41:41  danbri
+Trying local copy of XSLT doc.
+
+Revision 1.11  2003/01/12 01:20:18  danbri
+added a link to morten&apos;s xslt rdfs viewer.
+
+Revision 1.10  2003/01/11 18:56:49  danbri
+Removed datatype range from lat and long properties, since they would
+have required each occurance of the property to mention the datatype.
+
+Revision 1.9  2003/01/11 11:41:31  danbri
+Another typo; repaired rdfs:Property to rdf:Property x4
+
+Revision 1.8  2003/01/11 11:05:02  danbri
+Added an rdfs:range for each lat/long/alt property,
+http://www.w3.org/2001/XMLSchema#float
+
+Revision 1.7  2003/01/10 20:25:16  danbri
+Longer rdfs:comment for Point, trying to be Earth-centric and neutral about
+coordinate system(s) at the same time. Feedback welcomed.
+
+Revision 1.6  2003/01/10 20:18:30  danbri
+Added CVS log comments into the RDF/XML as an rdfs:comment property of the
+vocabulary. Note that this is not common practice (but seems both harmless
+and potentially useful).
+
+
+revision 1.5
+date: 2003/01/10 20:14:31;  author: danbri;  state: Exp;  lines: +16 -5
+Updated schema:
+Added a dc:date, added url for more info. Changed the rdfs:label of the
+namespace from gp to geo. Added a class Point, set as the rdfs:domain of
+each property. Added XML comment on the lat_long property suggesting that
+we might not need it (based on #rdfig commentary from implementors).
+
+revision 1.4
+date: 2003/01/10 20:01:07;  author: danbri;  state: Exp;  lines: +6 -5
+Fixed typo; several rdfs:about attributes are now rdf:about. Thanks to MortenF in
+#rdfig for catching this error.
+
+revision 1.3
+date: 2003/01/10 11:59:03;  author: danbri;  state: Exp;  lines: +4 -3
+fixed buglet in vocab, added more wgs links
+
+revision 1.2
+date: 2003/01/10 11:01:11;  author: danbri;  state: Exp;  lines: +4 -4
+Removed alt from the as-a-flat-string property, and switched from
+space separated to comma separated.
+
+revision 1.1
+date: 2003/01/10 10:53:23;  author: danbri;  state: Exp;
+basic geo vocab
+
+</rdfs:comment>
+        <rdfs:label>geo</rdfs:label>
+    </rdf:Description>
+    <rdf:Description rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#lat_long">
+        <rdfs:comment>A comma-separated representation of a latitude, longitude coordinate.</rdfs:comment>
+        <rdfs:label>lat/long</rdfs:label>
+    </rdf:Description>
+    <rdf:Description rdf:about="http://www.w3.org/2003/01/geo/wgs84_pos#location">
+        <rdfs:comment>The relation between something and the point, 
+ or other geometrical thing in space, where it is.  For example, the realtionship between
+ a radio tower and a Point with a given lat and long.
+ Or a relationship between a park and its outline as a closed arc of points, or a road and
+ its location as a arc (a sequence of points).
+ Clearly in practice there will be limit to the accuracy of any such statement, but one would expect
+ an accuracy appropriate for the size of the object and uses such as mapping .
+ </rdfs:comment>
+        <rdfs:label>location</rdfs:label>
+    </rdf:Description>
+    <rdf:Description rdf:about="http://www.w3.org/ns/prov-links#">
+        <rdfs:seeAlso rdf:resource="https://www.cidoc-crm.org/html/cidoc_crm_v7.1.2.html#E4"/>
+    </rdf:Description>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 4.5.26.2023-07-17T20:34:13Z) https://github.com/owlcs/owlapi -->
+
