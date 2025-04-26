@@ -88,23 +88,48 @@ function install_kubectl() {
   
   # Download the Google Cloud public signing key
   if [[ "$UBUNTU_VERSION" == "22.04" ]]; then
-    # Method for Ubuntu 22.04
+    # Updated method for Ubuntu 22.04
     sudo apt-get update
-    sudo apt-get install -y ca-certificates curl
-    sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo apt-get install -y apt-transport-https ca-certificates curl
+    
+    # Download the Kubernetes signing key
+    curl -fsSL https://dl.k8s.io/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+    
+    # Add Kubernetes apt repository - use 'kubernetes-xenial' for compatibility
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    
+    # Update with retry mechanism
+    for i in {1..3}; do
+      if sudo apt-get update; then
+        break
+      else
+        echo "Repository update failed, retrying in 5 seconds... (Attempt $i of 3)"
+        sleep 5
+      fi
+    done
+    
+    # If repository still fails, use direct download method
+    if ! sudo apt-cache search kubectl | grep -q kubectl; then
+      echo "Repository method failed. Using direct binary download instead."
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      rm kubectl
+    else
+      # Install kubectl from repository if available
+      sudo apt-get install -y kubectl
+    fi
   else
     # Method for Ubuntu 24.04 and newer
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+  
+    # Update apt package index
+    sudo apt-get update
+  
+    # Install kubectl
+    sudo apt-get install -y kubectl
   fi
-  
-  # Update apt package index
-  sudo apt-get update
-  
-  # Install kubectl
-  sudo apt-get install -y kubectl
   
   echo "kubectl installed successfully"
   kubectl version --client

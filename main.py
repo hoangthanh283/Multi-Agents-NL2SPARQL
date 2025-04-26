@@ -11,12 +11,15 @@ load_dotenv()
 from tqdm import tqdm
 
 from agents.entity_recognition import EntityRecognitionAgent
-from agents.langchian_master_agent import MasterAgentBase
+from agents.master_agent import MasterAgent
+from agents.ontology_mapping import OntologyMappingAgent
 from agents.plan_formulation_2 import PlanFormulationAgent
 from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
 from agents.response_generation_2 import ResponseGenerationAgent
+from agents.sparql_construction import SPARQLConstructionAgent
 from agents.validation_2 import ValidationAgent
+from database.elastic_client import ElasticClient
 from database.qdrant_client import QdrantClient
 from models.embeddings import BiEncoderModel, CrossEncoderModel
 from models.entity_recognition import GLiNERModel
@@ -32,6 +35,7 @@ GRAPHDB_ENDPOINT = os.path.join(GRAPHDB_URL, GRAPHDB_REPO_ID)
 def initialize_databases():
     """Initialize vector database, elastic search and ontology store."""
     logger.info("Initializing databases...")
+    
     # Initialize Qdrant client.
     qdrant_client = QdrantClient(url=os.getenv("QDRANT_URL"))
     for collection in QdrantCollections:
@@ -57,7 +61,12 @@ def initialize_databases():
                     }
                     points.append(point)
                 qdrant_client.upsert_points(collection_name, points)
-    return qdrant_client
+    
+    # Initialize Elasticsearch client
+    elastic_client = ElasticClient(url=os.getenv("ELASTICSEARCH_URL"))
+    elastic_client.initialize_indices()
+    
+    return qdrant_client, elastic_client
 
 
 def initialize_models():
@@ -79,8 +88,8 @@ def initialize_models():
     return bi_encoder, cross_encoder, entity_recognition_model
 
 
-def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
-    master_agent = MasterAgentBase(agent_id="main_master_agent")
+def create_master_agent(qdrant_client, elastic_client, bi_encoder, entity_recognition_model):
+    master_agent = MasterAgent()
     query_refinement_agent = QueryRefinementAgent(
         qdrant_client=qdrant_client,
         embedding_model=bi_encoder
@@ -89,14 +98,21 @@ def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
         entity_recognition_model=entity_recognition_model, 
         ontology_store=None
     )
-    query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
+    ontology_mapping_agent = OntologyMappingAgent()
     plan_formulation_agent = PlanFormulationAgent()
+    sparql_construction = SPARQLConstructionAgent()
+    query_execution_agent = QueryExecutionAgent(
+        endpoint_url=GRAPHDB_ENDPOINT,
+        elastic_client=elastic_client
+    )
     validation_agent = ValidationAgent()
     response_generation_agent = ResponseGenerationAgent()
     master_agent.register_slave_agent("query_refinement", query_refinement_agent)
     master_agent.register_slave_agent("entity_recognition", entity_recognition_agent)
+    master_agent.register_slave_agent("ontology_mapping", ontology_mapping_agent)
     master_agent.register_slave_agent("plan_formulation", plan_formulation_agent)
     master_agent.register_slave_agent("validation", validation_agent)
+    master_agent.register_slave_agent("sparql_construction", sparql_construction)
     master_agent.register_slave_agent("response_generation", response_generation_agent)
     master_agent.register_slave_agent("query_execution", query_execution_agent)
     return master_agent
@@ -126,7 +142,7 @@ def interactive_session(master_agent):
         user_query = input("Your question: ")
         
         # Check for exit command
-        if user_query.lower() in ['exit', 'quit', 'bye']:
+        if (user_query.lower() in ['exit', 'quit', 'bye']):
             logger.info("Goodbye!")
             break
         
@@ -159,11 +175,11 @@ def main():
     logger.info("Starting Natural Language to SPARQL conversion system...")
     
     # Initialize components
-    qdrant_client = initialize_databases()
+    qdrant_client, elastic_client = initialize_databases()
     bi_encoder, _, entity_recognition_model = initialize_models()
 
     # Initialize master agent with all slave agents
-    master_agent = create_master_agent(qdrant_client, bi_encoder, entity_recognition_model)
+    master_agent = create_master_agent(qdrant_client, elastic_client, bi_encoder, entity_recognition_model)
     interactive_session(master_agent)
     logger.info("NL to SPARQL conversion system terminated.")
 

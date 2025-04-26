@@ -34,12 +34,15 @@ class ResponseDomainMaster(DomainMaster):
         
         # Initialize wrapped agents
         try:
-            # Query execution agent
+            # Query execution agent with Redis caching support
             self.query_execution = AgentAdapter(
-                agent_instance=QueryExecutionAgent(),
+                agent_instance=QueryExecutionAgent(
+                    endpoint_url=endpoint_url,
+                    redis_url=redis_url  # Pass Redis URL to enable distributed caching
+                ),
                 agent_type="query_execution"
             )
-            logger.info("Query execution agent initialized")
+            logger.info("Query execution agent initialized with Redis caching")
             
             # Response generation agent
             self.response_generation = AgentAdapter(
@@ -105,7 +108,8 @@ class ResponseDomainMaster(DomainMaster):
             "slave_type": "query_execution",
             "parameters": {
                 "sparql_query": sparql_query,
-                "endpoint": self.endpoint_url
+                "endpoint": self.endpoint_url,
+                "use_cache": True  # Enable caching for all query executions
             }
         }
         

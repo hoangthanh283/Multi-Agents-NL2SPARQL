@@ -7,9 +7,10 @@ from prometheus_client import Counter, Gauge, Histogram, start_http_server
 from adapters.agent_adapter import AgentAdapter
 from agents.entity_recognition import EntityRecognitionAgent
 from agents.ontology_mapping import OntologyMappingAgent
+from agents.plan_formulation_2 import PlanFormulationAgent
 from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
-from agents.response_generation import ResponseGenerationAgent
+from agents.response_generation_2 import ResponseGenerationAgent
 from agents.sparql_construction import SPARQLConstructionAgent
 from agents.sparql_validation import SPARQLValidationAgent
 from database.ontology_store import OntologyStore
@@ -172,6 +173,12 @@ def query_sparql_construction(parameters):
 def query_validation(parameters):
     """Validate SPARQL query using the sparql validation agent"""
     adapter = AgentAdapter(SPARQLValidationAgent(), "validation")
+    return adapter.execute_task(parameters)
+
+@celery_app.task(name='response.plan_formulation')
+def response_plan_formulation(parameters):
+    """Formulate a plan using the plan formulation agent"""
+    adapter = AgentAdapter(PlanFormulationAgent(), "plan_formulation")
     return adapter.execute_task(parameters)
 
 @celery_app.task(name='response.query_execution')

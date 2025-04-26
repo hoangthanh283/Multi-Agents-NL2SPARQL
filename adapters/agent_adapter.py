@@ -54,15 +54,26 @@ class AgentAdapter:
                 "sparql_construction": "construct_query",
                 "query_execution": "execute_query",
                 "response_generation": "generate_response",
-                "validation": "validate"
+                "validation": "validate"  # This will now work with our ValidationSlave's wrapper method
             }
             self.agent_method = method_mappings.get(agent_type, "execute")
         else:
             self.agent_method = agent_method
         
-        # Ensure the agent has the required method
+        # Check if agent has the required method, if not, try to find an alternative
         if not hasattr(self.agent, self.agent_method):
-            logger.warning(f"Agent of type {agent_type} does not have method {self.agent_method}")
+            # For validation type, check if either validate_plan or validate_query exists
+            if self.agent_type == "validation":
+                if hasattr(self.agent, "validate_plan"):
+                    logger.info(f"Agent of type {agent_type} using validate_plan method instead of {self.agent_method}")
+                    self.agent_method = "validate_plan"
+                elif hasattr(self.agent, "validate_query"):
+                    logger.info(f"Agent of type {agent_type} using validate_query method instead of {self.agent_method}")
+                    self.agent_method = "validate_query"
+                else:
+                    logger.warning(f"Agent of type {agent_type} does not have any validation methods")
+            else:
+                logger.warning(f"Agent of type {agent_type} does not have method {self.agent_method}")
         
         # Prometheus metrics - use get_or_create_metric to avoid duplication
         self.task_counter = get_or_create_metric(

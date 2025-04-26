@@ -21,6 +21,7 @@ services:
       - kafka
       - dask-scheduler
       - qdrant
+      - elasticsearch
 
   # Celery Worker
   worker:
@@ -41,6 +42,7 @@ services:
       - kafka
       - dask-scheduler
       - qdrant
+      - elasticsearch
 
   # Redis for caching and message broker
   redis:
@@ -180,6 +182,19 @@ services:
     environment:
       - QDRANT_ALLOW_FULL_TEXT_SEARCH=true
 
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
 volumes:
   redis-data:
   kafka-data:
@@ -188,3 +203,4 @@ volumes:
   grafana-data:
   ray-temp:
   qdrant-data:
+  elasticsearch_data:

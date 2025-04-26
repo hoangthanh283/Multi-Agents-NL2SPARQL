@@ -1,12 +1,14 @@
+import hashlib
 import json
 import threading
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import redis
 from prometheus_client import Counter, Gauge, Histogram
 
+from database.elastic_client import ElasticClient
 from database.ontology_store import OntologyStore
 from database.qdrant_client import QdrantClient
 from master.nlp_master import NLPDomainMaster
@@ -27,6 +29,7 @@ class GlobalMaster:
     - Routing workflows between domain masters
     - Handling workflow completion and errors
     - Providing status updates and metrics
+    - Caching query results to avoid redundant processing
     """
     
     def __init__(self, redis_url: str, endpoint_url: str = None):
@@ -44,6 +47,10 @@ class GlobalMaster:
         self.redis = redis.from_url(redis_url)
         self.pubsub = self.redis.pubsub(ignore_subscribe_messages=True)
         
+        # Cache configuration
+        self.query_cache_expiry = 86400  # 24 hours for query cache
+        self.sparql_cache_expiry = 86400  # 24 hours for SPARQL results cache
+        
         # Create ontology store for use with domain masters
         ontology_store = OntologyStore(
             endpoint_url=endpoint_url,
@@ -59,6 +66,9 @@ class GlobalMaster:
             "query": QueryDomainMaster(redis_url, ontology_store),
             "response": ResponseDomainMaster(redis_url, endpoint_url)
         }
+        
+        # Initialize Elasticsearch client for query caching
+        self.elastic_client = ElasticClient()
         
         # Keep track of active workflows
         self.active_workflows = {}
@@ -83,7 +93,243 @@ class GlobalMaster:
             'Number of active NL2SPARQL workflows'
         )
         
+        # Cache metrics
+        self.query_cache_hits = Counter('query_cache_hits_total', 'Total query cache hits')
+        self.query_cache_misses = Counter('query_cache_misses_total', 'Total query cache misses')
+        self.sparql_cache_hits = Counter('sparql_cache_hits_total', 'Total SPARQL cache hits')
+        self.sparql_cache_misses = Counter('sparql_cache_misses_total', 'Total SPARQL cache misses')
+        
         logger.info("GlobalMaster initialized")
+        
+    # Cache-related methods
+    def _generate_query_cache_key(self, query: str, context: List[str] = None) -> str:
+        """
+        Generate a cache key for a natural language query.
+        
+        Args:
+            query: The natural language query
+            context: Optional context information
+            
+        Returns:
+            Cache key string
+        """
+        # Normalize query by lowercasing and removing extra whitespace
+        normalized_query = query.lower().strip()
+        
+        # Create a composite key from the query and context
+        key_content = normalized_query
+        if context:
+            # Sort context items to ensure consistent keys regardless of order
+            key_content += "||" + "||".join(sorted([str(item) for item in context]))
+            
+        # Create a hash of the content
+        query_hash = hashlib.md5(key_content.encode('utf-8')).hexdigest()
+        return f"cache:query:{query_hash}"
+        
+    def _generate_sparql_cache_key(self, sparql_query: str) -> str:
+        """
+        Generate a cache key for a SPARQL query.
+        
+        Args:
+            sparql_query: The SPARQL query
+            
+        Returns:
+            Cache key string
+        """
+        # Normalize query by removing extra whitespace
+        normalized_query = " ".join(sparql_query.split())
+        
+        # Create a hash of the query
+        query_hash = hashlib.md5(normalized_query.encode('utf-8')).hexdigest()
+        return f"cache:sparql:{query_hash}"
+        
+    def get_cached_query_result(self, query: str, context: List[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Get cached result for a natural language query.
+        
+        Args:
+            query: The natural language query
+            context: Optional context information
+            
+        Returns:
+            Cached result or None if not found
+        """
+        try:
+            cache_key = self._generate_query_cache_key(query, context)
+            cached_data = self.redis.get(cache_key)
+            
+            if cached_data:
+                logger.info(f"Query cache hit for: {query[:50]}...")
+                self.query_cache_hits.inc()
+                
+                result = json.loads(cached_data)
+                result["from_cache"] = True
+                result["cache_type"] = "query"
+                return result
+            else:
+                self.query_cache_misses.inc()
+                logger.debug(f"Query cache miss for: {query[:50]}...")
+        except Exception as e:
+            logger.warning(f"Error retrieving from query cache: {e}")
+            
+        return None
+        
+    def cache_query_result(self, query: str, result: Dict[str, Any], context: List[str] = None) -> None:
+        """
+        Cache the result for a natural language query.
+        
+        Args:
+            query: The natural language query
+            result: The result to cache
+            context: Optional context information
+        """
+        try:
+            # Don't cache errors
+            if result.get("error"):
+                return
+                
+            cache_key = self._generate_query_cache_key(query, context)
+            
+            # Create a copy of the result without cache metadata
+            cache_result = result.copy()
+            cache_result.pop("from_cache", None)
+            cache_result.pop("cache_type", None)
+            
+            self.redis.setex(
+                cache_key,
+                self.query_cache_expiry,
+                json.dumps(cache_result)
+            )
+            logger.debug(f"Cached query result for: {query[:50]}...")
+        except Exception as e:
+            logger.warning(f"Error caching query result: {e}")
+            
+    def get_cached_sparql_result(self, sparql_query: str) -> Optional[Dict[str, Any]]:
+        """
+        Get cached result for a SPARQL query.
+        
+        Args:
+            sparql_query: The SPARQL query
+            
+        Returns:
+            Cached result or None if not found
+        """
+        try:
+            cache_key = self._generate_sparql_cache_key(sparql_query)
+            cached_data = self.redis.get(cache_key)
+            
+            if cached_data:
+                logger.info(f"SPARQL cache hit for: {sparql_query[:50]}...")
+                self.sparql_cache_hits.inc()
+                
+                result = json.loads(cached_data)
+                result["from_cache"] = True
+                result["cache_type"] = "sparql"
+                return result
+            else:
+                self.sparql_cache_misses.inc()
+                logger.debug(f"SPARQL cache miss for: {sparql_query[:50]}...")
+        except Exception as e:
+            logger.warning(f"Error retrieving from SPARQL cache: {e}")
+            
+        return None
+        
+    def cache_sparql_result(self, sparql_query: str, result: Dict[str, Any]) -> None:
+        """
+        Cache the result for a SPARQL query.
+        
+        Args:
+            sparql_query: The SPARQL query
+            result: The result to cache
+        """
+        try:
+            # Don't cache errors
+            if result.get("error"):
+                return
+                
+            cache_key = self._generate_sparql_cache_key(sparql_query)
+            
+            # Create a copy of the result without cache metadata
+            cache_result = result.copy()
+            cache_result.pop("from_cache", None)
+            cache_result.pop("cache_type", None)
+            
+            self.redis.setex(
+                cache_key,
+                self.sparql_cache_expiry,
+                json.dumps(cache_result)
+            )
+            logger.debug(f"Cached SPARQL result for: {sparql_query[:50]}...")
+        except Exception as e:
+            logger.warning(f"Error caching SPARQL result: {e}")
+            
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """
+        Get cache statistics.
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        query_cache_keys = len(self.redis.keys("cache:query:*"))
+        sparql_cache_keys = len(self.redis.keys("cache:sparql:*"))
+        
+        query_hit_count = self.query_cache_hits._value.get()
+        query_miss_count = self.query_cache_misses._value.get()
+        query_total = query_hit_count + query_miss_count
+        
+        sparql_hit_count = self.sparql_cache_hits._value.get()
+        sparql_miss_count = self.sparql_cache_misses._value.get()
+        sparql_total = sparql_hit_count + sparql_miss_count
+        
+        return {
+            "query_cache": {
+                "entries": query_cache_keys,
+                "hits": query_hit_count,
+                "misses": query_miss_count,
+                "hit_rate": (query_hit_count / query_total * 100) if query_total > 0 else 0,
+                "expiry": self.query_cache_expiry
+            },
+            "sparql_cache": {
+                "entries": sparql_cache_keys,
+                "hits": sparql_hit_count,
+                "misses": sparql_miss_count,
+                "hit_rate": (sparql_hit_count / sparql_total * 100) if sparql_total > 0 else 0,
+                "expiry": self.sparql_cache_expiry
+            }
+        }
+        
+    def clear_cache(self, cache_type: str = "all") -> Dict[str, Any]:
+        """
+        Clear the cache.
+        
+        Args:
+            cache_type: Type of cache to clear ("all", "query", or "sparql")
+            
+        Returns:
+            Dictionary with number of entries cleared
+        """
+        query_cleared = 0
+        sparql_cleared = 0
+        
+        if cache_type in ["all", "query"]:
+            query_keys = self.redis.keys("cache:query:*")
+            if query_keys:
+                query_cleared = len(query_keys)
+                self.redis.delete(*query_keys)
+                logger.info(f"Cleared {query_cleared} query cache entries")
+                
+        if cache_type in ["all", "sparql"]:
+            sparql_keys = self.redis.keys("cache:sparql:*")
+            if sparql_keys:
+                sparql_cleared = len(sparql_keys)
+                self.redis.delete(*sparql_keys)
+                logger.info(f"Cleared {sparql_cleared} SPARQL cache entries")
+                
+        return {
+            "query_entries_cleared": query_cleared,
+            "sparql_entries_cleared": sparql_cleared,
+            "total_cleared": query_cleared + sparql_cleared
+        }
     
     def start(self):
         """Start the global master and all domain masters."""
@@ -332,7 +578,7 @@ class GlobalMaster:
         """Listen for workflow completions and domain transitions."""
         while self.running:
             message = self.pubsub.get_message()
-            if message and message["type"] == "message":
+            if (message and message["type"] == "message"):
                 try:
                     channel = message["channel"]
                     if isinstance(channel, bytes):
@@ -360,40 +606,69 @@ class GlobalMaster:
         """
         request_id = workflow.get("request_id")
         
-        # Calculate processing time
-        created_at = workflow.get("created_at", 0)
-        completed_at = time.time()
-        processing_time = completed_at - created_at
+        if not request_id or request_id not in self.active_workflows:
+            logger.warning(f"Completion for unknown workflow {request_id}")
+            return
         
-        # Add completion timestamp if not already present
-        if "completed_at" not in workflow:
-            workflow["completed_at"] = completed_at
+        # Log completion
+        workflow_data = workflow.get("data", {})
+        error = workflow.get("error")
+        
+        if error:
+            logger.error(f"Workflow {request_id} completed with error: {error}")
+            self.request_counter.labels(status="error").inc()
+            log_workflow_completion(workflow, success=False)
+        else:
+            logger.info(f"Workflow {request_id} completed successfully")
+            self.request_counter.labels(status="success").inc()
+            log_workflow_completion(workflow, success=True)
             
-        # Update the final step's end time
-        for step in workflow.get("steps", []):
-            if step["domain"] == "response":
-                step["status"] = "completed"
-                step["end_time"] = completed_at
+            # Cache successful workflow results if not already from cache
+            if not workflow_data.get("from_cache", False):
+                try:
+                    # Cache the query result for future use
+                    query = workflow_data.get("query")
+                    context = workflow_data.get("context", [])
+                    sparql_query = workflow_data.get("sparql_query")
+                    query_results = workflow_data.get("query_results", {})
+                    response = workflow_data.get("response", "")
+                    
+                    if query and sparql_query and response:
+                        # Create a result object with all necessary data
+                        result = {
+                            "sparql_query": sparql_query,
+                            "response": response,
+                            "query_results": query_results
+                        }
+                        
+                        # Cache natural language query to result mapping
+                        self.cache_query_result(query, result, context)
+                        
+                        # If we have a valid SPARQL query and results, also cache those
+                        if sparql_query and query_results:
+                            self.cache_sparql_result(sparql_query, {
+                                "success": True,
+                                "results": query_results
+                            })
+                            
+                        logger.info(f"Cached results for workflow {request_id}")
+                except Exception as e:
+                    logger.warning(f"Error caching workflow results: {e}")
         
-        # Update workflow in Redis
-        workflow_key = f"workflow:{request_id}"
-        self.redis.set(workflow_key, json.dumps(workflow), ex=3600)  # 1 hour expiration
+        # Remove from active workflows
+        self.active_workflows.pop(request_id, None)
+        self.active_workflows_gauge.dec()
         
-        # Update metrics
-        self.processing_time.observe(processing_time)
-        status = "error" if "error" in workflow else "completed"
-        self.request_counter.labels(status=status).inc()
+        # Calculate and record processing time
+        if "created_at" in workflow and "completed_at" in workflow:
+            processing_time = workflow["completed_at"] - workflow["created_at"]
+            self.processing_time.observe(processing_time)
+            logger.debug(f"Workflow {request_id} completed in {processing_time:.2f}s")
         
-        # Log workflow completion
-        success = "error" not in workflow
-        log_workflow_completion(request_id, success, processing_time)
-        
-        if request_id in self.active_workflows:
-            # Remove from active workflows
-            del self.active_workflows[request_id]
-            self.active_workflows_gauge.dec()
-        
-        logger.info(f"Workflow {request_id} completed in {processing_time:.2f}s with status: {status}")
+        # Record workflow in history (limited size)
+        self.workflow_history.append(workflow)
+        if len(self.workflow_history) > self.max_history_size:
+            self.workflow_history.pop(0)
     
     def _handle_domain_transition(self, transition_data: Dict[str, Any]):
         """
@@ -470,4 +745,84 @@ class GlobalMaster:
             "active": self.running,
             "active_workflows": len(self.active_workflows),
             "domain_masters": domain_health
+        }
+
+    def process_query(self, query: str, context: List[str] = None) -> Dict[str, Any]:
+        """
+        Process a natural language query through the NL2SPARQL pipeline.
+        
+        Args:
+            query: The natural language query
+            context: Optional context information
+            
+        Returns:
+            Result dictionary
+        """
+        # Check Redis cache first
+        cached_result = self.get_cached_query_result(query, context)
+        if cached_result:
+            return cached_result
+            
+        # If not found in Redis, check Elasticsearch for similar queries
+        similar_query = self.elastic_client.search_similar_query(query, min_score=0.85)
+        if similar_query:
+            logger.info(f"Found similar query in ElasticSearch: {similar_query['natural_query'][:50]}...")
+            
+            # Return the similar query result but mark it as from Elasticsearch
+            result = {
+                "sparql_query": similar_query["sparql_query"],
+                "response": similar_query["response"],
+                "from_cache": True,
+                "cache_type": "elasticsearch",
+                "similarity_score": similar_query["score"],
+                "original_query": similar_query["natural_query"]
+            }
+            
+            # Also add to Redis cache for faster retrieval next time
+            self.cache_query_result(query, {
+                "sparql_query": similar_query["sparql_query"],
+                "response": similar_query["response"]
+            }, context)
+            
+            return result
+        
+        # No cache hits, process the query
+        logger.info(f"Processing new query: {query[:50]}...")
+        
+        # Create and start workflow
+        request_id = self.create_workflow(query, context)
+        self.start_workflow(request_id)
+        
+        # Wait for workflow to complete with timeout
+        start_time = time.time()
+        max_wait_time = 60.0  # Maximum wait time in seconds
+        
+        while time.time() - start_time < max_wait_time:
+            # Check if workflow is complete
+            workflow_result = self.get_workflow_result(request_id)
+            
+            if workflow_result and workflow_result.get("completed"):
+                # If successful, store in Elasticsearch for future similarity matching
+                if workflow_result.get("success") and "sparql_query" in workflow_result:
+                    self.elastic_client.store_query_sparql_pair({
+                        "natural_query": query,
+                        "sparql_query": workflow_result["sparql_query"],
+                        "response": workflow_result.get("response", ""),
+                        "context": context or [],
+                        "timestamp": time.time(),
+                        "execution_time": workflow_result.get("processing_time", 0),
+                        "successful": workflow_result.get("success", True)
+                    })
+                    logger.info(f"Stored query-SPARQL pair in Elasticsearch for: {query[:50]}...")
+                
+                return workflow_result
+                
+            # Small sleep to prevent CPU spinning
+            time.sleep(0.1)
+            
+        # Timeout reached
+        logger.error(f"Workflow {request_id} timed out")
+        return {
+            "error": "Request timed out",
+            "request_id": request_id
         }

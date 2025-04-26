@@ -24,17 +24,25 @@ class ValidationSlave(AbstractSlave):
         """
         self.config = config or {}
         
-        # Dynamically import the SPARQLValidationAgent to handle both versions
+        # Dynamically import the validation agent to handle both versions
         try:
-            # Try to import the newer version first
+            # Try to import the newer version first (validation_2.py)
             validation_module = importlib.import_module('agents.validation_2')
-            self.agent = validation_module.SPARQLValidationAgent()
+            # Use the correct class name - ValidationAgent, not SPARQLValidationAgent
+            self.agent = validation_module.ValidationAgent()
             self.version = 2
-        except (ImportError, AttributeError):
-            # Fall back to the original version
-            validation_module = importlib.import_module('agents.sparql_validation')
-            self.agent = validation_module.SPARQLValidationAgent()
-            self.version = 1
+            logger.info("Using ValidationAgent from validation_2.py")
+        except (ImportError, AttributeError) as e:
+            logger.info(f"Couldn't load ValidationAgent from validation_2.py: {str(e)}")
+            try:
+                # Fall back to the original version (sparql_validation.py)
+                validation_module = importlib.import_module('agents.sparql_validation')
+                self.agent = validation_module.SPARQLValidationAgent()
+                self.version = 1
+                logger.info("Using SPARQLValidationAgent from sparql_validation.py")
+            except (ImportError, AttributeError) as e:
+                logger.error(f"Failed to load validation agent: {str(e)}")
+                raise ImportError("Could not import any validation agent implementation")
         
         # Metrics
         self.task_counter = Counter(
@@ -78,9 +86,9 @@ class ValidationSlave(AbstractSlave):
                     "error": "Missing required parameter: sparql_query"
                 }
             
-            # Execute validation using the agent
-            validation_result = self.agent.validate(
-                sparql_query, 
+            # Use the unified validate method
+            validation_result = self.validate(
+                sparql_query=sparql_query,
                 query_metadata=query_metadata
             )
             
@@ -116,6 +124,35 @@ class ValidationSlave(AbstractSlave):
             # Record processing time
             self.processing_time.labels(version=self.version).observe(time.time() - start_time)
     
+    def validate(self, sparql_query: str, query_metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Unified validation method that calls the appropriate agent validation method based on version.
+        
+        Args:
+            sparql_query: The SPARQL query to validate
+            query_metadata: Additional metadata to assist with validation
+            
+        Returns:
+            Validation result dictionary
+        """
+        if query_metadata is None:
+            query_metadata = {}
+            
+        if self.version == 2:
+            # For validation_2.py, use validate_plan method
+            execution_plan = {"steps": [{"query": sparql_query}]}
+            query_context = {"user_query": query_metadata.get("original_query", "")}
+            return self.agent.validate_plan(
+                execution_plan=execution_plan,
+                query_context=query_context
+            )
+        else:
+            # For sparql_validation.py, use validate_query method
+            return self.agent.validate_query(
+                sparql_query=sparql_query, 
+                query_metadata=query_metadata
+            )
+    
     def report_status(self) -> Dict[str, Any]:
         """
         Report the current status of this slave.
@@ -144,4 +181,5 @@ class ValidationSlave(AbstractSlave):
         Returns:
             Boolean indicating health status
         """
-        return hasattr(self, 'agent') and hasattr(self.agent, 'validate')
+        # Simply check if this class has the validate method and the agent exists
+        return hasattr(self, 'agent') and hasattr(self, 'validate')

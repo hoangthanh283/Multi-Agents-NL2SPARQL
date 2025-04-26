@@ -198,7 +198,7 @@ Your task is to transform these technical results into a helpful, clear response
 
 User Query: {refined_query}
 
-CUrrent SPARQL Query: {sparql_query}
+Current SPARQL Query: {sparql_query}
 
 Execution Results:
 {results_text}

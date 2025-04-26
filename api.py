@@ -1,6 +1,8 @@
+import json
 import logging
 import os
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
@@ -158,8 +160,8 @@ async def startup_event():
         # Start the global master and domain masters
         global_master.start()
         
-        # Start the slave pools
-        await slave_pool_manager.start_all_pools()
+        # Start the slave pools - fixed method name
+        slave_pool_manager.start_pools()
         
         # Start system monitoring with Redis URL for metrics collection
         start_monitoring(redis_url=redis_url)
@@ -248,9 +250,49 @@ async def health():
 @rate_limit(redis_client, lambda q: "nl2sparql", max_requests=50, time_window=60)
 @circuit_break(redis_client, "nl2sparql", failure_threshold=5)
 async def nl_to_sparql(query: NLQuery):
-    """Process natural language query using the master-slave architecture"""
+    """Process natural language query using the master-slave architecture with caching"""
     try:
-        # Create a workflow using the global master
+        # Check cache first for this exact query
+        cached_result = global_master.get_cached_query_result(query.query, query.context)
+        
+        if cached_result:
+            # If we have a cached result, create a completed workflow with the cached data
+            logger.info(f"Using cached result for query: {query.query[:50]}...")
+            
+            # Generate a new request_id for this cached result
+            request_id = str(uuid.uuid4())
+            
+            # Create a workflow structure pre-filled with the cached result
+            workflow = {
+                "request_id": request_id,
+                "created_at": time.time(),
+                "completed_at": time.time(),  # Mark as immediately completed
+                "data": {
+                    "query": query.query,
+                    "context": query.context or [],
+                    "sparql_query": cached_result.get("sparql_query", ""),
+                    "response": cached_result.get("response", ""),
+                    "from_cache": True,
+                    "cache_type": cached_result.get("cache_type", "query")
+                },
+                "steps": [
+                    {"domain": "nlp", "status": "cached", "start_time": None, "end_time": None},
+                    {"domain": "query", "status": "cached", "start_time": None, "end_time": None},
+                    {"domain": "response", "status": "cached", "start_time": None, "end_time": None}
+                ],
+                "current_domain": "completed"
+            }
+            
+            # Store completed workflow in Redis
+            workflow_key = f"workflow:{request_id}"
+            global_master.redis.set(workflow_key, json.dumps(workflow), ex=3600)  # 1 hour expiration
+            
+            # Update metrics
+            global_master.request_counter.labels(status="cache_hit").inc()
+            
+            return {"task_id": request_id}
+        
+        # No cached result, create a new workflow
         request_id = global_master.create_workflow(query.query, query.context)
         
         # Start the workflow asynchronously
@@ -291,7 +333,13 @@ async def get_workflow_result(workflow_id: str):
                 "status": "pending",
                 "message": "Workflow is still processing"
             }
-            
+        
+        # Include cache information in the response
+        if "data" in result and "from_cache" in result["data"]:
+            result["cache_hit"] = result["data"]["from_cache"]
+            if result["data"].get("cache_type"):
+                result["cache_type"] = result["data"]["cache_type"]
+                
         return result
     except HTTPException:
         raise
@@ -595,6 +643,172 @@ async def get_metrics_dashboard():
         }
     except Exception as e:
         logger.error(f"Error in get_metrics_dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/cache/stats")
+async def get_cache_stats():
+    """Get statistics about the caching system"""
+    try:
+        # Initialize statistics dictionary
+        cache_stats = {
+            "query_cache": {
+                "size": 0,
+                "hits": 0,
+                "misses": 0,
+                "hit_rate": 0.0
+            },
+            "sparql_cache": {
+                "size": 0,
+                "hits": 0,
+                "misses": 0,
+                "hit_rate": 0.0
+            },
+            "total": {
+                "size": 0,
+                "hits": 0, 
+                "misses": 0,
+                "hit_rate": 0.0
+            }
+        }
+        
+        # Get query cache stats from Redis
+        query_cache_keys = len(redis_client.keys("cache:query:*"))
+        query_cache_hits = int(redis_client.get("stats:cache:query:hits") or 0)
+        query_cache_misses = int(redis_client.get("stats:cache:query:misses") or 0)
+        query_hit_rate = 0.0
+        if (query_cache_hits + query_cache_misses) > 0:
+            query_hit_rate = query_cache_hits / (query_cache_hits + query_cache_misses)
+            
+        cache_stats["query_cache"] = {
+            "size": query_cache_keys,
+            "hits": query_cache_hits,
+            "misses": query_cache_misses,
+            "hit_rate": round(query_hit_rate * 100, 2)  # Convert to percentage
+        }
+        
+        # Get SPARQL cache stats from Redis
+        sparql_cache_keys = len(redis_client.keys("cache:sparql:*"))
+        sparql_cache_hits = int(redis_client.get("stats:cache:sparql:hits") or 0)
+        sparql_cache_misses = int(redis_client.get("stats:cache:sparql:misses") or 0)
+        sparql_hit_rate = 0.0
+        if (sparql_cache_hits + sparql_cache_misses) > 0:
+            sparql_hit_rate = sparql_cache_hits / (sparql_cache_hits + sparql_cache_misses)
+            
+        cache_stats["sparql_cache"] = {
+            "size": sparql_cache_keys,
+            "hits": sparql_cache_hits,
+            "misses": sparql_cache_misses,
+            "hit_rate": round(sparql_hit_rate * 100, 2)  # Convert to percentage
+        }
+        
+        # Calculate totals
+        total_keys = query_cache_keys + sparql_cache_keys
+        total_hits = query_cache_hits + sparql_cache_hits
+        total_misses = query_cache_misses + sparql_cache_misses
+        total_hit_rate = 0.0
+        if (total_hits + total_misses) > 0:
+            total_hit_rate = total_hits / (total_hits + total_misses)
+            
+        cache_stats["total"] = {
+            "size": total_keys,
+            "hits": total_hits,
+            "misses": total_misses,
+            "hit_rate": round(total_hit_rate * 100, 2)  # Convert to percentage
+        }
+        
+        # Get memory usage
+        used_memory = redis_client.info("memory")["used_memory_human"]
+        used_memory_rss = redis_client.info("memory")["used_memory_rss_human"]
+        
+        cache_stats["memory"] = {
+            "used_memory": used_memory,
+            "used_memory_rss": used_memory_rss
+        }
+        
+        return cache_stats
+    except Exception as e:
+        logger.error(f"Error in get_cache_stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/cache/clear")
+async def clear_cache():
+    """Clear all cached queries and results"""
+    try:
+        # Clear query cache
+        query_keys = redis_client.keys("cache:query:*")
+        query_count = len(query_keys)
+        if query_keys:
+            redis_client.delete(*query_keys)
+            
+        # Clear SPARQL cache
+        sparql_keys = redis_client.keys("cache:sparql:*")
+        sparql_count = len(sparql_keys)
+        if sparql_keys:
+            redis_client.delete(*sparql_keys)
+            
+        # Reset cache stats
+        redis_client.set("stats:cache:query:hits", 0)
+        redis_client.set("stats:cache:query:misses", 0)
+        redis_client.set("stats:cache:sparql:hits", 0)
+        redis_client.set("stats:cache:sparql:misses", 0)
+        
+        return {
+            "success": True,
+            "message": f"Cache cleared successfully. Removed {query_count} query entries and {sparql_count} SPARQL entries.",
+            "cleared": {
+                "query_cache": query_count,
+                "sparql_cache": sparql_count,
+                "total": query_count + sparql_count
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/cache/clear/pattern")
+async def clear_cache_by_pattern():
+    """Clear cache entries matching a specific pattern"""
+    try:
+        # Get all query cache keys
+        query_keys = redis_client.keys("cache:query:*")
+        sparql_keys = redis_client.keys("cache:sparql:*")
+        
+        # Prepare response data
+        cleared = {
+            "query_cache": 0,
+            "sparql_cache": 0,
+            "total": 0
+        }
+        
+        # Function to process each key and determine if it should be deleted
+        def process_keys(keys, cache_type):
+            deleted_count = 0
+            for key in keys:
+                key_str = key.decode('utf-8') if isinstance(key, bytes) else key
+                
+                # For demonstration, we're clearing keys older than a certain time
+                # You can modify this logic to use query patterns from request body
+                ttl = redis_client.ttl(key)
+                
+                # For example, delete entries that expire in less than 1 hour (3600 seconds)
+                if ttl > 0 and ttl < 3600:
+                    redis_client.delete(key)
+                    deleted_count += 1
+            
+            return deleted_count
+        
+        # Process both cache types
+        cleared["query_cache"] = process_keys(query_keys, "query")
+        cleared["sparql_cache"] = process_keys(sparql_keys, "sparql")
+        cleared["total"] = cleared["query_cache"] + cleared["sparql_cache"]
+        
+        return {
+            "success": True,
+            "message": f"Cache selectively cleared. Removed {cleared['total']} entries.",
+            "cleared": cleared
+        }
+    except Exception as e:
+        logger.error(f"Error clearing cache by pattern: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

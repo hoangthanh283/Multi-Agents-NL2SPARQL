@@ -7,7 +7,7 @@ import aiohttp
 import pytest
 import ray
 
-from agents.langchian_master_agent import DistributedMasterAgent
+from agents.langchain_master_agent import DistributedMasterAgent
 from config.cluster_config import cluster_config
 from config.ray_config import init_ray_cluster
 from utils.backup_manager import backup_manager

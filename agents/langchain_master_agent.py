@@ -24,12 +24,13 @@ AGENT_PROCESSING_TIME = Histogram('agent_processing_seconds', 'Time spent proces
 # Create a base class that isn't a Ray actor
 class MasterAgentBase:
     """Base class for master agents that isn't a Ray actor"""
-    def __init__(self, agent_id: str):
+    def __init__(self, agent_id: str, elastic_client=None):
         self.agent_id = agent_id
         self._state = {}
         self.memory = ConversationBufferMemory(return_messages=True)
         self.tools: List[Tool] = []
         self.sub_agents = {}
+        self.elastic_client = elastic_client
         
     def get_state(self) -> Dict[str, Any]:
         """Get agent's current state"""
@@ -42,8 +43,8 @@ class MasterAgentBase:
 # Now use the Ray remote decorator on the concrete implementation
 @ray.remote
 class DistributedMasterAgent(MasterAgentBase):
-    def __init__(self, agent_id: str):
-        super().__init__(agent_id)
+    def __init__(self, agent_id: str, elastic_client=None):
+        super().__init__(agent_id, elastic_client=elastic_client)
         self._initialize_sub_agents()
 
     def _initialize_sub_agents(self):

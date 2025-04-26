@@ -34,6 +34,59 @@ class ElasticClient:
         
         # Default number of results to return
         self.default_size = elasticsearch_config["search_limit"]
+
+        # Create query-sparql index if it doesn't exist
+        self._create_query_sparql_index()
+    
+    def _create_query_sparql_index(self):
+        """
+        Create the query-sparql index if it doesn't exist.
+        """
+        index_name = "nl2sparql-queries"
+        
+        # Check if index already exists
+        if not self.client.indices.exists(index=index_name):
+            mappings = {
+                "properties": {
+                    "natural_query": {
+                        "type": "text",
+                        "analyzer": "standard",
+                        "fields": {
+                            "keyword": {
+                                "type": "keyword",
+                                "ignore_above": 256
+                            }
+                        }
+                    },
+                    "context": {
+                        "type": "text",
+                        "analyzer": "standard"
+                    },
+                    "sparql_query": {
+                        "type": "text",
+                        "index": True
+                    },
+                    "response": {
+                        "type": "text",
+                        "index": True
+                    },
+                    "timestamp": {
+                        "type": "date"
+                    },
+                    "execution_time": {
+                        "type": "float"
+                    },
+                    "successful": {
+                        "type": "boolean"
+                    }
+                }
+            }
+            
+            try:
+                self.create_index(index_name, mappings)
+                logger.info(f"Created nl2sparql-queries index in Elasticsearch")
+            except Exception as e:
+                logger.error(f"Error creating nl2sparql-queries index: {e}")
     
     def create_index(self, index_name: str, mappings: Dict[str, Any]) -> bool:
         """
@@ -489,3 +542,119 @@ class ElasticClient:
         except Exception as e:
             logger.error(f"Error checking index: {e}")
             return False
+
+    def store_query_sparql_pair(self, query_data: Dict[str, Any]) -> bool:
+        """
+        Store a natural language query and its corresponding SPARQL query in Elasticsearch.
+        
+        Args:
+            query_data: Dictionary containing:
+                - natural_query: The natural language query
+                - sparql_query: The corresponding SPARQL query
+                - context: Optional context information
+                - response: Generated response
+                - successful: Whether query execution was successful
+                - execution_time: Time taken to process the query
+                
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Ensure required fields are present
+            if "natural_query" not in query_data or "sparql_query" not in query_data:
+                logger.error("Missing required fields in query data")
+                return False
+            
+            # Prepare document
+            doc = {
+                "natural_query": query_data["natural_query"],
+                "sparql_query": query_data["sparql_query"],
+                "context": query_data.get("context", ""),
+                "response": query_data.get("response", ""),
+                "timestamp": query_data.get("timestamp", time.time()),
+                "execution_time": query_data.get("execution_time", 0),
+                "successful": query_data.get("successful", True)
+            }
+            
+            # Index the document
+            response = self.client.index(
+                index="nl2sparql-queries",
+                document=doc,
+                refresh=True  # Ensure document is immediately searchable
+            )
+            
+            success = response.get("result") in ["created", "updated"]
+            if success:
+                logger.info(f"Stored query-SPARQL pair for: {query_data['natural_query'][:50]}...")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Error storing query-SPARQL pair: {e}")
+            return False
+    
+    def search_similar_query(self, natural_query: str, min_score: float = 0.8) -> Optional[Dict[str, Any]]:
+        """
+        Search for semantically similar queries in Elasticsearch.
+        
+        Args:
+            natural_query: The natural language query to search for
+            min_score: Minimum relevance score (0.0 to 1.0)
+            
+        Returns:
+            Dictionary with match results or None if no good match found
+        """
+        try:
+            # Prepare query
+            search_query = {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "match": {
+                                    "natural_query": {
+                                        "query": natural_query,
+                                        "fuzziness": "AUTO"
+                                    }
+                                }
+                            },
+                            {
+                                "term": {
+                                    "successful": True
+                                }
+                            }
+                        ]
+                    }
+                },
+                "size": 1  # Only need the best match
+            }
+            
+            # Execute search
+            response = self.client.search(
+                index="nl2sparql-queries",
+                body=search_query
+            )
+            
+            hits = response.get("hits", {}).get("hits", [])
+            if not hits:
+                logger.debug(f"No similar query found for: {natural_query[:50]}...")
+                return None
+                
+            best_match = hits[0]
+            score = best_match.get("_score", 0)
+            max_score = response.get("hits", {}).get("max_score", 1)
+            normalized_score = score / max_score if max_score > 0 else 0
+            
+            if normalized_score < min_score:
+                logger.debug(f"Similar query found but score too low ({normalized_score:.2f}): {natural_query[:50]}...")
+                return None
+                
+            result = best_match.get("_source", {})
+            result["score"] = normalized_score
+            
+            logger.info(f"Found similar query (score: {normalized_score:.2f}): {result.get('natural_query', '')[:50]}...")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error searching for similar query: {e}")
+            return None

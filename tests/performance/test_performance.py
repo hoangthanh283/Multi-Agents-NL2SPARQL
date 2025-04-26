@@ -9,7 +9,7 @@ import pytest
 import ray
 from prometheus_client import Histogram
 
-from agents.langchian_master_agent import DistributedMasterAgent
+from agents.langchain_master_agent import DistributedMasterAgent
 from config.ray_config import init_ray_cluster
 
 # Performance metrics
