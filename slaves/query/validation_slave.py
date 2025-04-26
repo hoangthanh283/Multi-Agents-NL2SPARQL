@@ -4,7 +4,7 @@ from typing import Any, Dict
 from prometheus_client import Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
-from agents.sparql_validation import SparqlValidationAgent
+from agents.sparql_validation import SPARQLValidationAgent
 from slaves.base import AbstractSlave
 from utils.logging_utils import setup_logging
 
@@ -13,7 +13,7 @@ logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 class ValidationSlave(AbstractSlave):
     """
     Slave responsible for validating SPARQL queries.
-    Wraps the existing SparqlValidationAgent through an adapter.
+    Wraps the existing SPARQLValidationAgent through an adapter.
     """
     
     def __init__(self, config: Dict[str, Any] = None):
@@ -27,7 +27,7 @@ class ValidationSlave(AbstractSlave):
         
         try:
             # Initialize the validation agent
-            agent = SparqlValidationAgent()
+            agent = SPARQLValidationAgent()
             
             # Wrap the agent with an adapter
             self.agent_adapter = AgentAdapter(

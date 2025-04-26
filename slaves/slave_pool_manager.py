@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 
 from prometheus_client import Gauge
 
+import utils.monitoring
 from slaves.slave_pool import SlavePool
 from utils.logging_utils import setup_logging
-from utils.monitoring import log_slave_pool_size
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
@@ -167,7 +167,7 @@ class SlavePoolManager:
                         self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(max_size)
                         
                         # Log to monitoring system
-                        log_slave_pool_size(domain, slave_type, current_size)
+                        utils.monitoring.log_slave_pool_size(domain, slave_type, current_size)
                     except Exception as e:
                         logger.error(f"Error updating metrics for {domain}/{slave_type}: {e}")
         except Exception as e:
@@ -219,7 +219,7 @@ class SlavePoolManager:
                 self.pool_capacity.labels(domain=domain, slave_type=slave_type).set(max_size)
                 
                 # Log to monitoring system
-                log_slave_pool_size(domain, slave_type, initial_size)
+                utils.monitoring.log_slave_pool_size(domain, slave_type, initial_size)
                 
                 logger.info(f"Started slave pool for {domain}/{slave_type}")
                 
@@ -376,6 +376,6 @@ class SlavePoolManager:
         if success:
             # Update metrics
             self.pool_size.labels(domain=domain, slave_type=slave_type).set(target_size)
-            log_slave_pool_size(domain, slave_type, target_size)
+            utils.monitoring.log_slave_pool_size(domain, slave_type, target_size)
             
         return success

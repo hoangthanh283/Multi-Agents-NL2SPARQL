@@ -1,18 +1,17 @@
-import asyncio
-import copy
-import json
 import logging
 from typing import Any, Dict, List
 
-import autogen
 import ray
 from langchain.agents import Tool
 from langchain.memory import ConversationBufferMemory
 from loguru import logger
 from prometheus_client import Counter, Histogram
 
-from config.agent_config import get_agent_config
-from config.ray_config import DistributedAgent
+from agents.entity_recognition import EntityRecognitionAgent
+from agents.ontology_mapping import OntologyMappingAgent
+from agents.plan_formulation import PlanFormulationAgent
+from agents.sparql_construction import SPARQLConstructionAgent
+from agents.validation import ValidationAgent
 from utils.kafka_handler import QUERY_TOPIC, RESULT_TOPIC, kafka_handler
 from utils.monitoring import metrics_logger
 
@@ -22,13 +21,29 @@ logger = logging.getLogger(__name__)
 AGENT_REQUESTS = Counter('agent_requests_total', 'Total number of agent requests', ['agent_type'])
 AGENT_PROCESSING_TIME = Histogram('agent_processing_seconds', 'Time spent processing requests', ['agent_type'])
 
-@ray.remote
-class DistributedMasterAgent(DistributedAgent):
+# Create a base class that isn't a Ray actor
+class MasterAgentBase:
+    """Base class for master agents that isn't a Ray actor"""
     def __init__(self, agent_id: str):
-        super().__init__(agent_id)
+        self.agent_id = agent_id
+        self._state = {}
         self.memory = ConversationBufferMemory(return_messages=True)
         self.tools: List[Tool] = []
         self.sub_agents = {}
+        
+    def get_state(self) -> Dict[str, Any]:
+        """Get agent's current state"""
+        return self._state
+
+    def update_state(self, state: Dict[str, Any]) -> None:
+        """Update agent's state"""
+        self._state.update(state)
+
+# Now use the Ray remote decorator on the concrete implementation
+@ray.remote
+class DistributedMasterAgent(MasterAgentBase):
+    def __init__(self, agent_id: str):
+        super().__init__(agent_id)
         self._initialize_sub_agents()
 
     def _initialize_sub_agents(self):

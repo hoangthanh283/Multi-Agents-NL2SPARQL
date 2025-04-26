@@ -1,15 +1,18 @@
 import logging
 import time
 from functools import wraps
-from typing import Callable, Optional
+from typing import Callable
 
 import redis
-from prometheus_client import Counter
+
+# Import the safe_counter function from monitoring module
+from utils.monitoring import safe_counter
 
 logger = logging.getLogger(__name__)
 
-CIRCUIT_BREAKER_FAILURES = Counter(
-    'circuit_breaker_failures_total',
+# Use safe_counter instead of direct Counter for consistent metric registration
+CIRCUIT_BREAKER_FAILURES = safe_counter(
+    'circuit_breaker_failures',
     'Number of circuit breaker failures',
     ['service']
 )

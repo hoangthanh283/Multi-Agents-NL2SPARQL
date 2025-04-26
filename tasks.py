@@ -11,7 +11,7 @@ from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
 from agents.response_generation import ResponseGenerationAgent
 from agents.sparql_construction import SPARQLConstructionAgent
-from agents.sparql_validation import SparqlValidationAgent
+from agents.sparql_validation import SPARQLValidationAgent
 from database.ontology_store import OntologyStore
 
 # Configure logging
@@ -171,7 +171,7 @@ def query_sparql_construction(parameters):
 @celery_app.task(name='query.validation')
 def query_validation(parameters):
     """Validate SPARQL query using the sparql validation agent"""
-    adapter = AgentAdapter(SparqlValidationAgent(), "validation")
+    adapter = AgentAdapter(SPARQLValidationAgent(), "validation")
     return adapter.execute_task(parameters)
 
 @celery_app.task(name='response.query_execution')

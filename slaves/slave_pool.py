@@ -9,7 +9,6 @@ import redis
 from prometheus_client import Counter, Gauge
 
 from slaves.base import AbstractSlave
-from utils.health_checker import HealthChecker
 from utils.load_balancer import LoadBalancer
 from utils.logging_utils import setup_logging
 
@@ -73,6 +72,8 @@ class SlavePool:
         
         # Load balancer and health checker
         self.load_balancer = LoadBalancer(algorithm="round_robin")
+        from utils.health_checker import \
+            HealthChecker  # Move this import to break the circular dependency
         self.health_checker = HealthChecker(
             check_interval=30,
             failure_threshold=3

@@ -2,17 +2,16 @@ import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import redis
 import uvicorn
 from celery.result import AsyncResult
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Gauge, Histogram,
-                               generate_latest)
+from prometheus_client import (CONTENT_TYPE_LATEST, REGISTRY, Counter, Gauge,
+                               Histogram, generate_latest)
 from pydantic import BaseModel
-from rdflib import Graph
 from starlette.responses import Response
 
 from database.ontology_store import OntologyStore
@@ -28,26 +27,34 @@ from utils.rate_limiter import circuit_break, rate_limit
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# System metrics
-CPU_USAGE = Gauge('system_cpu_usage', 'System CPU usage percentage')
-MEMORY_USAGE = Gauge('system_memory_usage_bytes', 'System memory usage in bytes')
-DISK_USAGE = Gauge('system_disk_usage_bytes', 'System disk usage in bytes')
-NETWORK_IO = Counter('system_network_io_bytes', 'System network IO in bytes', ['direction'])
+
+def get_or_create_metric(metric_cls, name, *args, **kwargs):
+    try:
+        # Try to get the metric if it already exists
+        return REGISTRY._names_to_collectors[name]
+    except KeyError:
+        # Otherwise, create it
+        return metric_cls(name, *args, **kwargs)
+
+CPU_USAGE = get_or_create_metric(Gauge, 'system_cpu_usage', 'System CPU usage percentage')
+MEMORY_USAGE = get_or_create_metric(Gauge, 'system_memory_usage_bytes', 'System memory usage in bytes')
+DISK_USAGE = get_or_create_metric(Gauge, 'system_disk_usage_bytes', 'System disk usage in bytes')
+NETWORK_IO = get_or_create_metric(Counter, 'system_network_io_bytes', 'System network IO in bytes', ['direction'])
 
 # Define Prometheus metrics
-REQUEST_COUNT = Counter(
+REQUEST_COUNT = get_or_create_metric(Counter,
     'http_requests_total',
     'Total number of HTTP requests',
     ['method', 'endpoint', 'status']
 )
 
-REQUEST_LATENCY = Histogram(
+REQUEST_LATENCY = get_or_create_metric(Histogram,
     'http_request_duration_seconds',
     'HTTP request latency in seconds',
     ['method', 'endpoint']
 )
 
-QUERY_COUNT = Counter(
+QUERY_COUNT = get_or_create_metric(Counter,
     'sparql_queries_total',
     'Total number of SPARQL queries executed',
     ['type', 'status']

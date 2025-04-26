@@ -456,6 +456,11 @@ def log_task_execution(workflow_id: str, task_name: str, success: bool, duration
         
     logger.debug(f"Workflow {workflow_id}: task {task_name} completed in {duration:.2f}s with success={success}")
 
+def log_slave_pool_size(domain: str, slave_type: str, size: int):
+    """Log the size of a slave pool to Prometheus metrics"""
+    SLAVE_POOL_SIZE.labels(domain=domain, slave_type=slave_type).set(size)
+    logger.debug(f"Slave pool {domain}/{slave_type} size updated to {size}")
+
 # System monitoring functions
 
 def start_monitoring(redis_url: str = None):

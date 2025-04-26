@@ -1,11 +1,30 @@
 import time
 from typing import Any, Callable, Dict
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import REGISTRY, Counter, Histogram
 
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
+
+def get_or_create_metric(metric_cls, name, *args, **kwargs):
+    """
+    Get an existing metric or create a new one to avoid duplicate registration errors.
+    
+    Args:
+        metric_cls: The metric class (Counter, Gauge, Histogram)
+        name: The name of the metric
+        args, kwargs: Arguments for creating a new metric
+        
+    Returns:
+        The existing or newly created metric
+    """
+    try:
+        # Try to get the metric if it already exists
+        return REGISTRY._names_to_collectors[name]
+    except KeyError:
+        # Otherwise, create it
+        return metric_cls(name, *args, **kwargs)
 
 class AgentAdapter:
     """
@@ -45,14 +64,16 @@ class AgentAdapter:
         if not hasattr(self.agent, self.agent_method):
             logger.warning(f"Agent of type {agent_type} does not have method {self.agent_method}")
         
-        # Prometheus metrics
-        self.task_counter = Counter(
-            f'agent_tasks_total', 
+        # Prometheus metrics - use get_or_create_metric to avoid duplication
+        self.task_counter = get_or_create_metric(
+            Counter,
+            'agent_tasks_total', 
             'Total tasks processed by agent',
             ['agent_type', 'status']
         )
-        self.execution_time = Histogram(
-            f'agent_execution_seconds', 
+        self.execution_time = get_or_create_metric(
+            Histogram,
+            'agent_execution_seconds', 
             'Time spent in agent execution',
             ['agent_type']
         )

@@ -5,7 +5,10 @@ from typing import Any, Dict
 from adapters.agent_adapter import AgentAdapter
 from agents.entity_recognition import EntityRecognitionAgent
 from agents.query_refinement import QueryRefinementAgent
+from database.ontology_store import OntologyStore
+from database.qdrant_client import QdrantClient
 from master.base import DomainMaster
+from models.entity_recognition import GLiNERModel
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -20,27 +23,39 @@ class NLPDomainMaster(DomainMaster):
     - Initial NLP preprocessing
     """
     
-    def __init__(self, redis_url: str):
+    def __init__(self, redis_url: str, ontology_store: OntologyStore, qdrant_client: QdrantClient = None):
         """
         Initialize the NLP domain master.
         
         Args:
             redis_url: Redis URL for communication
+            ontology_store: OntologyStore instance for entity recognition
+            qdrant_client: QdrantClient instance for entity embedding storage
         """
-        super().__init__("nlp", redis_url)
+        super().__init__("nlp", redis_url, qdrant_client)
+        
+        # Store ontology store
+        self.ontology_store = ontology_store
         
         # Initialize wrapped agents
         try:
             # Query refinement agent
             self.query_refinement = AgentAdapter(
-                agent_instance=QueryRefinementAgent(),
+                agent_instance=QueryRefinementAgent(
+                    qdrant_client=qdrant_client
+                ),
                 agent_type="query_refinement"
             )
             logger.info("Query refinement agent initialized")
             
             # Entity recognition agent
+            gliner_model = GLiNERModel()
             self.entity_recognition = AgentAdapter(
-                agent_instance=EntityRecognitionAgent(),
+                agent_instance=EntityRecognitionAgent(
+                    entity_recognition_model=gliner_model, 
+                    ontology_store=ontology_store,
+                    qdrant_client=qdrant_client
+                ),
                 agent_type="entity_recognition"
             )
             logger.info("Entity recognition agent initialized")

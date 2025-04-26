@@ -13,12 +13,14 @@ services:
       - GRAPHDB_URL=http://graphdb:7200/repositories/CHeVIE
       - KAFKA_BROKERS=kafka:9092
       - DASK_SCHEDULER=dask-scheduler:8786
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       - redis
       - graphdb
       - worker
       - kafka
       - dask-scheduler
+      - qdrant
 
   # Celery Worker
   worker:
@@ -32,11 +34,13 @@ services:
       - GRAPHDB_URL=http://graphdb:7200/repositories/CHeVIE
       - KAFKA_BROKERS=kafka:9092
       - DASK_SCHEDULER=dask-scheduler:8786
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       - redis
       - graphdb
       - kafka
       - dask-scheduler
+      - qdrant
 
   # Redis for caching and message broker
   redis:
@@ -163,7 +167,18 @@ services:
     volumes:
       - ray-temp:/tmp/ray
     deploy:
-      replicas: 3
+      replicas: 1
+
+  # Qdrant vector database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      - QDRANT_ALLOW_FULL_TEXT_SEARCH=true
 
 volumes:
   redis-data:
@@ -172,3 +187,4 @@ volumes:
   prometheus-data:
   grafana-data:
   ray-temp:
+  qdrant-data:

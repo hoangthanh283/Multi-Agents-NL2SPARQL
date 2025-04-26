@@ -1,16 +1,12 @@
 import asyncio
-import logging
-import os
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict
 
 import aiohttp
-import psutil
 from prometheus_client import Counter, Gauge, Histogram
 
 from config.logging_config import get_logger
-from slaves.slave_pool_manager import SlavePoolManager
 from utils.deployment_manager import deployment_manager
 
 logger = get_logger(__name__, 'health_checker')
@@ -46,7 +42,7 @@ class HealthChecker:
         }
         self.running = False
 
-    def register_slave_pool_manager(self, manager: SlavePoolManager):
+    def register_slave_pool_manager(self, manager):
         """Register the slave pool manager for health checks"""
         self.slave_pool_manager = manager
         logger.info("Registered slave pool manager with health checker")
@@ -241,35 +237,54 @@ class HealthChecker:
             
         slave_pools_health = {}
         
-        # Get health status for each slave pool
-        for domain, pool in self.slave_pool_manager.slave_pools.items():
-            try:
-                metrics = await pool.get_metrics()
-                status = "healthy"
-                message = "Slave pool operational"
+        # Get health status for each slave pool - use appropriate accessor based on the actual structure
+        try:
+            # Attempt to access pools via the known interface
+            if hasattr(self.slave_pool_manager, 'pools'):
+                pools_dict = self.slave_pool_manager.pools
+            elif hasattr(self.slave_pool_manager, 'slave_pools'):
+                pools_dict = self.slave_pool_manager.slave_pools
+            else:
+                return {"status": "critical", "message": "Cannot access slave pools structure"}
                 
-                # Determine status based on metrics
-                if metrics.get("active_slaves", 0) == 0:
-                    status = "critical"
-                    message = "No active slaves in pool"
-                elif metrics.get("success_rate", 1.0) < 0.8:
-                    status = "warning"
-                    message = "Low success rate"
-                elif metrics.get("load_factor", 0.0) > 0.9:
-                    status = "warning"
-                    message = "High load factor"
-                
-                slave_pools_health[domain] = {
-                    "status": status,
-                    "message": message,
-                    "metrics": metrics
-                }
-            except Exception as e:
-                logger.error(f"Error getting metrics for slave pool {domain}: {str(e)}")
-                slave_pools_health[domain] = {
-                    "status": "critical",
-                    "message": f"Error: {str(e)}"
-                }
+            for domain, pools in pools_dict.items():
+                for slave_type, pool in pools.items():
+                    try:
+                        # Safely access pool metrics if the method exists
+                        if hasattr(pool, 'get_metrics'):
+                            metrics = await pool.get_metrics()
+                        else:
+                            # Fall back to status if get_metrics doesn't exist
+                            metrics = pool.get_status() if hasattr(pool, 'get_status') else {"status": "unknown"}
+                            
+                        status = "healthy"
+                        message = "Slave pool operational"
+                        
+                        # Determine status based on metrics
+                        if metrics.get("active_slaves", 0) == 0:
+                            status = "critical"
+                            message = "No active slaves in pool"
+                        elif metrics.get("success_rate", 1.0) < 0.8:
+                            status = "warning"
+                            message = "Low success rate"
+                        elif metrics.get("load_factor", 0.0) > 0.9:
+                            status = "warning"
+                            message = "High load factor"
+                        
+                        slave_pools_health[f"{domain}/{slave_type}"] = {
+                            "status": status,
+                            "message": message,
+                            "metrics": metrics
+                        }
+                    except Exception as e:
+                        logger.error(f"Error getting metrics for slave pool {domain}/{slave_type}: {str(e)}")
+                        slave_pools_health[f"{domain}/{slave_type}"] = {
+                            "status": "critical",
+                            "message": f"Error: {str(e)}"
+                        }
+        except Exception as e:
+            logger.error(f"Error accessing slave pools: {str(e)}")
+            return {"status": "critical", "message": f"Error accessing slave pools: {str(e)}"}
                 
         return slave_pools_health
 

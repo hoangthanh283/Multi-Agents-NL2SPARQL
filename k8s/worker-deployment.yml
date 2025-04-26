@@ -25,6 +25,8 @@ spec:
           value: "redis://redis:6379/2"
         - name: GRAPHDB_URL
           value: "http://graphdb:7200/repositories/CHeVIE"
+        - name: QDRANT_URL
+          value: "http://qdrant:6333"
         resources:
           requests:
             memory: "256Mi"

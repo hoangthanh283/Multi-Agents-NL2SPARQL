@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  labels:
+    app: qdrant
+    component: vector-db
+spec:
+  serviceName: qdrant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qdrant
+  template:
+    metadata:
+      labels:
+        app: qdrant
+    spec:
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:latest
+        ports:
+        - containerPort: 6333
+          name: http
+        - containerPort: 6334
+          name: grpc
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "0.5"
+            memory: "1Gi"
+        volumeMounts:
+        - name: qdrant-storage
+          mountPath: /qdrant/storage
+        env:
+        - name: QDRANT_ALLOW_FULL_TEXT_SEARCH
+          value: "true"
+        - name: QDRANT_LOG_LEVEL
+          value: "INFO"
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 6333
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: qdrant-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
