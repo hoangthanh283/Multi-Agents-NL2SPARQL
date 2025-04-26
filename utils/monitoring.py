@@ -47,6 +47,50 @@ SLAVE_TASKS = Counter(
     ['domain', 'slave_type', 'status']
 )
 
+# Domain Master specific metrics
+DOMAIN_REQUEST_COUNT = Counter(
+    'domain_requests_total',
+    'Total number of requests processed by domain',
+    ['domain', 'status']
+)
+
+DOMAIN_PROCESSING_TIME = Histogram(
+    'domain_processing_seconds',
+    'Time spent processing in domain',
+    ['domain', 'task_type']
+)
+
+ACTIVE_WORKFLOWS = Gauge(
+    'active_workflows',
+    'Number of active workflows',
+    ['domain']
+)
+
+SLAVE_TASK_COUNT = Counter(
+    'slave_tasks_total',
+    'Total number of tasks processed by slaves',
+    ['slave_type', 'status']
+)
+
+# Agent metrics
+AGENT_EXECUTION_TIME = Histogram(
+    'agent_execution_seconds',
+    'Time spent in agent execution',
+    ['agent_type', 'method']
+)
+
+AGENT_ERRORS = Counter(
+    'agent_errors_total',
+    'Total number of agent execution errors',
+    ['agent_type', 'error_type']
+)
+
+AGENT_MEMORY_USAGE = Gauge(
+    'agent_memory_usage_bytes',
+    'Agent memory usage in bytes',
+    ['agent_type']
+)
+
 class SystemMonitor:
     _instance = None
     def __new__(cls, *args, **kwargs):
@@ -397,6 +441,16 @@ def start_monitoring(redis_url: str = None):
     if redis_url:
         global metrics_logger
         metrics_logger = MetricsLogger(redis_url)
+        
+        # Initialize Redis client and start workflow metrics update thread
+        try:
+            redis_client = redis.from_url(redis_url)
+            thread = threading.Thread(target=update_workflow_metrics, args=(redis_client,))
+            thread.daemon = True
+            thread.start()
+            logger.info("Workflow metrics update thread started")
+        except Exception as e:
+            logger.error(f"Failed to start workflow metrics update thread: {e}")
     
     # Start system monitor
     system_monitor.start()
@@ -407,3 +461,34 @@ def stop_monitoring():
     """Stop the monitoring systems"""
     system_monitor.stop()
     logger.info("Monitoring systems stopped")
+
+# Function to periodically update workflow metrics from Redis
+def update_workflow_metrics(redis_client):
+    """
+    Update workflow metrics from Redis.
+    
+    This function periodically counts active workflows by domain and updates
+    the ACTIVE_WORKFLOWS gauge to reflect current workflow processing state.
+    
+    Args:
+        redis_client: Redis client instance for querying workflow keys
+    """
+    while True:
+        try:
+            # Count active workflows by domain
+            nlp_workflows = len(redis_client.keys("workflow:*:nlp:active"))
+            query_workflows = len(redis_client.keys("workflow:*:query:active"))
+            response_workflows = len(redis_client.keys("workflow:*:response:active"))
+            
+            # Update Prometheus gauges
+            ACTIVE_WORKFLOWS.labels(domain="nlp").set(nlp_workflows)
+            ACTIVE_WORKFLOWS.labels(domain="query").set(query_workflows)
+            ACTIVE_WORKFLOWS.labels(domain="response").set(response_workflows)
+            
+            # Log metrics update
+            logger.debug(f"Updated workflow metrics - NLP: {nlp_workflows}, Query: {query_workflows}, Response: {response_workflows}")
+            
+        except Exception as e:
+            logger.error(f"Error updating workflow metrics: {e}")
+        
+        time.sleep(15)  # Update every 15 seconds

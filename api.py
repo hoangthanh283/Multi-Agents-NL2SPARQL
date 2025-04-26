@@ -137,7 +137,7 @@ class TaskResponse(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    global slave_pool_manager
+    global slave_pool_manager, global_master
     try:
         # Initialize the slave pool manager with the configured pools
         slave_pool_manager = SlavePoolManager(
@@ -145,11 +145,22 @@ async def startup_event():
             slave_pool_configs=slave_pool_configs
         )
         
+        # Start the global master and domain masters
+        global_master.start()
+        
         # Start the slave pools
         await slave_pool_manager.start_all_pools()
         
-        # Start system monitoring
-        start_monitoring()
+        # Start system monitoring with Redis URL for metrics collection
+        start_monitoring(redis_url=redis_url)
+        
+        # Register health checks
+        register_health_checks(
+            health_checker=health_check,
+            slave_pool_manager=slave_pool_manager,
+            redis_url=redis_url,
+            db_client=ontology_store
+        )
         
         logger.info("API startup completed successfully")
     except Exception as e:
@@ -406,6 +417,174 @@ async def get_system_metrics():
         metrics_logger.log_metrics(metrics)
         return metrics
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/metrics/domains")
+async def get_domain_metrics():
+    """Get domain-specific metrics for the master-slave architecture"""
+    try:
+        # Collect active workflows by domain
+        active_workflows = {
+            "nlp": int(ACTIVE_WORKFLOWS.labels(domain="nlp")._value.get()),
+            "query": int(ACTIVE_WORKFLOWS.labels(domain="query")._value.get()),
+            "response": int(ACTIVE_WORKFLOWS.labels(domain="response")._value.get())
+        }
+        
+        # Get domain task counts from Redis
+        domain_tasks = {
+            "nlp": {
+                "total": redis_client.get("metrics:tasks:nlp:total") or 0,
+                "success": redis_client.get("metrics:tasks:nlp:success") or 0,
+                "error": redis_client.get("metrics:tasks:nlp:error") or 0
+            },
+            "query": {
+                "total": redis_client.get("metrics:tasks:query:total") or 0,
+                "success": redis_client.get("metrics:tasks:query:success") or 0,
+                "error": redis_client.get("metrics:tasks:query:error") or 0
+            },
+            "response": {
+                "total": redis_client.get("metrics:tasks:response:total") or 0,
+                "success": redis_client.get("metrics:tasks:response:success") or 0,
+                "error": redis_client.get("metrics:tasks:response:error") or 0
+            }
+        }
+        
+        # Get slave pool statistics
+        slave_pool_stats = {}
+        if slave_pool_manager:
+            slave_pool_stats = slave_pool_manager.get_statistics()
+        
+        return {
+            "active_workflows": active_workflows,
+            "domain_tasks": domain_tasks,
+            "slave_pools": slave_pool_stats
+        }
+    except Exception as e:
+        logger.error(f"Error in get_domain_metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/metrics/dashboard")
+async def get_metrics_dashboard():
+    """Get comprehensive metrics for dashboard visualization"""
+    try:
+        # System metrics
+        system_metrics = {
+            "cpu_usage": float(CPU_USAGE._value.get()),
+            "memory_usage_mb": float(MEMORY_USAGE._value.get()) / (1024 * 1024),
+            "disk_usage_gb": float(DISK_USAGE._value.get()) / (1024 * 1024 * 1024)
+        }
+        
+        # Workflow metrics
+        workflows_total = {
+            "total": int(WORKFLOW_COUNTER.labels(status="started")._value.get()),
+            "completed": int(WORKFLOW_COUNTER.labels(status="completed")._value.get()),
+            "error": int(WORKFLOW_COUNTER.labels(status="error")._value.get())
+        }
+        
+        # Active workflows by domain
+        active_workflows = {
+            "total": sum(int(ACTIVE_WORKFLOWS.labels(domain=domain)._value.get()) 
+                       for domain in ["nlp", "query", "response"]),
+            "by_domain": {
+                "nlp": int(ACTIVE_WORKFLOWS.labels(domain="nlp")._value.get()),
+                "query": int(ACTIVE_WORKFLOWS.labels(domain="query")._value.get()),
+                "response": int(ACTIVE_WORKFLOWS.labels(domain="response")._value.get())
+            }
+        }
+        
+        # Processing time histograms
+        # Note: We're extracting the sum and count from histogram metrics
+        processing_times = {
+            "nlp": {
+                "sum": float(DOMAIN_PROCESSING_TIME.labels(domain="nlp", task_type="total")._sum.get()),
+                "count": float(DOMAIN_PROCESSING_TIME.labels(domain="nlp", task_type="total")._count.get())
+            },
+            "query": {
+                "sum": float(DOMAIN_PROCESSING_TIME.labels(domain="query", task_type="total")._sum.get()),
+                "count": float(DOMAIN_PROCESSING_TIME.labels(domain="query", task_type="total")._count.get())
+            },
+            "response": {
+                "sum": float(DOMAIN_PROCESSING_TIME.labels(domain="response", task_type="total")._sum.get()),
+                "count": float(DOMAIN_PROCESSING_TIME.labels(domain="response", task_type="total")._count.get())
+            }
+        }
+        
+        # Task counters
+        task_counters = {
+            "nlp": {
+                "query_refinement": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="query_refinement", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="query_refinement", status="error")._value.get())
+                },
+                "entity_recognition": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="entity_recognition", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="entity_recognition", status="error")._value.get())
+                }
+            },
+            "query": {
+                "ontology_mapping": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="ontology_mapping", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="ontology_mapping", status="error")._value.get())
+                },
+                "sparql_construction": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="sparql_construction", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="sparql_construction", status="error")._value.get())
+                },
+                "validation": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="validation", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="validation", status="error")._value.get())
+                }
+            },
+            "response": {
+                "query_execution": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="query_execution", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="query_execution", status="error")._value.get())
+                },
+                "response_generation": {
+                    "success": int(SLAVE_TASK_COUNT.labels(slave_type="response_generation", status="success")._value.get()),
+                    "error": int(SLAVE_TASK_COUNT.labels(slave_type="response_generation", status="error")._value.get())
+                }
+            }
+        }
+        
+        # Get slave pool stats
+        slave_pools = {}
+        if slave_pool_manager:
+            # Get current pool sizes
+            for pool_name, config in slave_pool_configs.items():
+                domain, slave_type = pool_name.split('.', 1)
+                if domain not in slave_pools:
+                    slave_pools[domain] = {}
+                
+                pool_size = int(SLAVE_POOL_SIZE.labels(domain=domain, slave_type=slave_type)._value.get())
+                slave_pools[domain][slave_type] = {
+                    "size": pool_size,
+                    "max_size": config["max_size"],
+                    "utilization": pool_size / config["max_size"] if config["max_size"] > 0 else 0
+                }
+        
+        # API request metrics
+        api_requests = {
+            "total": int(REQUEST_COUNT.labels(method="POST", endpoint="/api/nl2sparql", status=200)._value.get()),
+            "error": int(REQUEST_COUNT.labels(method="POST", endpoint="/api/nl2sparql", status=500)._value.get()),
+            "average_latency": float(REQUEST_LATENCY.labels(method="POST", endpoint="/api/nl2sparql")._sum.get()) / 
+                              (float(REQUEST_LATENCY.labels(method="POST", endpoint="/api/nl2sparql")._count.get()) or 1)
+        }
+        
+        return {
+            "timestamp": time.time(),
+            "system": system_metrics,
+            "workflows": {
+                "total": workflows_total,
+                "active": active_workflows
+            },
+            "processing_times": processing_times,
+            "tasks": task_counters,
+            "slave_pools": slave_pools,
+            "api": api_requests
+        }
+    except Exception as e:
+        logger.error(f"Error in get_metrics_dashboard: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

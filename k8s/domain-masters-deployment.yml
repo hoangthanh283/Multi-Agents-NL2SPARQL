@@ -1,28 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nl2sparql-api
-  labels:
-    app: nl2sparql-api
-    component: global-master
+  name: nl2sparql-domain-masters
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: nl2sparql-api
-      component: global-master
+      app: nl2sparql-domain-masters
+      component: domain-master
   template:
     metadata:
       labels:
-        app: nl2sparql-api
-        component: global-master
+        app: nl2sparql-domain-masters
+        component: domain-master
     spec:
       containers:
-      - name: api
+      - name: domain-master
         image: nl2sparql-api:latest
-        ports:
-        - containerPort: 8000
         env:
+        - name: ROLE
+          value: "domain_master"
+        - name: DOMAIN_TYPE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['domain-type']
         - name: REDIS_URL
           value: "redis://redis:6379/0"
         - name: CELERY_BROKER_URL
@@ -31,8 +32,6 @@ spec:
           value: "redis://redis:6379/2"
         - name: GRAPHDB_URL
           value: "http://graphdb:7200/repositories/CHeVIE"
-        - name: ROLE
-          value: "global_master"
         resources:
           requests:
             memory: "256Mi"
@@ -40,3 +39,8 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+      initContainers:
+      - name: domain-init
+        image: busybox
+        command: ['sh', '-c', 'echo "Initializing domain master"']
+    # Add domain-type annotation for each replica using a StatefulSet or Helm for production
