@@ -48,13 +48,12 @@ class NLPDomainMaster(DomainMaster):
             )
             logger.info("Query refinement agent initialized")
             
-            # Entity recognition agent
+            # Entity recognition agent - only pass the parameters it expects
             gliner_model = GLiNERModel()
             self.entity_recognition = AgentAdapter(
                 agent_instance=EntityRecognitionAgent(
                     entity_recognition_model=gliner_model, 
-                    ontology_store=ontology_store,
-                    qdrant_client=qdrant_client
+                    ontology_store=ontology_store
                 ),
                 agent_type="entity_recognition"
             )
