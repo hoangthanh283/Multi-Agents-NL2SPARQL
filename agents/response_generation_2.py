@@ -74,15 +74,16 @@ class ResponseGenerationAgent:
         Returns:
             Natural language response to the user
         """
-        # Prepare the prompt for the LLM
+        # Prepare the optimized prompt for the LLM
         prompt = self._prepare_response_prompt(refined_query, sparql_query, execution_results)
         
-        # Get response from the LLM
+        # Get response from the LLM with a direct message for faster processing
         response = self.proxy.initiate_chat(
             self.autogen_agent,
             message=prompt
         )
         response_text = response.summary.strip()
+        
         # If response is empty, provide a fallback
         if not response_text:
             response_text = "I'm sorry, I couldn't generate a proper response based on the information available."
@@ -170,70 +171,35 @@ class ResponseGenerationAgent:
         execution_results: Dict[str, Any]
     ) -> str:
         """
-        Prepare the prompt for the LLM to generate a response.
+        Prepare an optimized prompt for the LLM to generate a response.
         
         Args:
             refined_query: The refined user query
+            sparql_query: The SPARQL query used
             execution_results: Results from tool execution
             
         Returns:
-            Complete prompt for the LLM
+            Optimized prompt for the LLM
         """
-        # Format the execution results
+        # Format the execution results concisely
         results_text = json.dumps(execution_results, indent=2)
         
-        # Determine if there were any errors
-        has_errors = any("error" in result for result in execution_results.values() if isinstance(result, dict))
+        # Check for errors or transaction data
+        has_errors = any("error" in str(result).lower() for result in execution_results.values())
         
-        # Check if results contain transaction data
-        has_transaction = any(
-            isinstance(result, dict) and "transaction" in result 
-            for result in execution_results.values()
-        )
-        
-        # Construct the complete prompt
-        prompt = f"""I need you to create a natural, conversational response to a user's blockchain query.
-You will be provided with the user's query and the raw results from blockchain API calls.
-Your task is to transform these technical results into a helpful, clear response.
+        # Create a more concise and focused prompt
+        prompt = f"""Convert the following technical results into a natural, conversational response:
 
 User Query: {refined_query}
+SPARQL Query: {sparql_query}
+Results: {results_text}
 
-CUrrent SPARQL Query: {sparql_query}
-
-Execution Results:
-{results_text}
-
-Follow these guidelines:
-1. Be conversational and friendly, like you're explaining to a person.
-2. Focus on the information most relevant to the user's query.
-3. Provide context and explanations for technical terms.
-4. Format numbers and data in a human-readable way (e.g., round large numbers, format prices).
-5. If the data includes timestamps, convert them to a user-friendly format.
-6. If there are errors in the results, acknowledge them honestly but constructively.
-7. Avoid technical jargon unless necessary for accuracy.
+Guidelines:
+1. Be concise and conversational
+2. Focus only on information relevant to the query
+3. Format numbers and dates in a readable way
+4. {"Explain errors clearly and suggest alternatives if possible" if has_errors else "Provide direct answers to the query"}
+5. Avoid technical jargon and don't reference "the results" or "the data"
 """
         
-        # Add transaction-specific instructions if needed
-        if has_transaction:
-            prompt += """
-For transaction data:
-1. Explain what the transaction will do in simple terms.
-2. Highlight important parameters like token amounts, recipients, etc.
-3. Remind the user that they would need to approve this transaction in their wallet.
-4. DO NOT include the raw transaction data in your response.
-"""
-        
-        # Add error-specific instructions if needed
-        if has_errors:
-            prompt += """
-Since there were errors in the execution:
-1. Clearly explain what went wrong in user-friendly terms.
-2. Suggest possible solutions or alternatives if appropriate.
-3. Be honest about limitations but maintain a helpful tone.
-"""
-        
-        prompt += """
-Your response should be complete and self-contained, without references to "the results" or "the data."
-Focus on providing value to the user by directly answering their question.
-"""
         return prompt

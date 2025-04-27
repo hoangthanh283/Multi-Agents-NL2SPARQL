@@ -17,6 +17,7 @@ from agents.query_execution import QueryExecutionAgent
 from agents.query_refinement import QueryRefinementAgent
 from agents.response_generation_2 import ResponseGenerationAgent
 from agents.validation_2 import ValidationAgent
+from agents.query_complexity import QueryComplexityClassifier
 from database.qdrant_client import QdrantClient
 from models.embeddings import BiEncoderModel, CrossEncoderModel
 from models.entity_recognition import GLiNERModel
@@ -93,8 +94,10 @@ def create_master_agent(qdrant_client, bi_encoder, entity_recognition_model):
     plan_formulation_agent = PlanFormulationAgent()
     validation_agent = ValidationAgent()
     response_generation_agent = ResponseGenerationAgent()
+    query_complexity_classifier = QueryComplexityClassifier()
     master_agent.register_slave_agent("query_refinement", query_refinement_agent)
     master_agent.register_slave_agent("entity_recognition", entity_recognition_agent)
+    master_agent.register_slave_agent("query_complexity_classifier", query_complexity_classifier)
     master_agent.register_slave_agent("plan_formulation", plan_formulation_agent)
     master_agent.register_slave_agent("validation", validation_agent)
     master_agent.register_slave_agent("response_generation", response_generation_agent)

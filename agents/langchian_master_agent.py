@@ -1,4 +1,4 @@
-import copy
+import os
 import json
 from typing import Any, Dict, List
 
@@ -6,6 +6,7 @@ import autogen
 from loguru import logger
 
 from config.agent_config import get_agent_config
+from caches.query_cache import ConstructionQueryCache
 
 
 class MasterAgent:
@@ -35,6 +36,16 @@ class MasterAgent:
         
         # Dictionary to hold all slave agents
         self.slave_agents = {}
+        self.result_cache = ConstructionQueryCache(
+            redis_host=os.getenv("REDIS_HOST"),
+            redis_port=os.getenv("REDIS_PORT"),
+            redis_ttl=os.getenv("REDIS_TTL"),
+            es_host=os.getenv("ES_HOST"),
+            es_port=os.getenv("ES_PORT"),
+            es_index=os.getenv("ES_INDEX"),
+            similarity_threshold=0.7
+        )   
+        self.query_prefix = "cache:query:"
 
     def register_slave_agent(self, agent_type: str, agent_instance):
         """Register a slave agent with the master agent."""
@@ -63,76 +74,110 @@ class MasterAgent:
         logger.info(f"Processing query: {user_query}")
         result = {"original_query": user_query, "conversation_history": conversation_history}
         try:
-            # Step 1: Refine the query
-            # conversation_history = None
-            refined_query = self._refine_query(user_query, conversation_history)
-            result["refined_query"] = refined_query
-            logger.info(f"Refined query: {refined_query}")
+            cache_entry = None
+            validation_result = {}
+            refined_query = None
+            if self.result_cache:
+                cache_entry = self.result_cache.search(user_query, self.query_prefix)
 
-            # Step 2: Recognize entities in the query
-            entities = self._recognize_entities(refined_query)
-            if hasattr(entities, 'content'):  # Handle ChatResult object
-                entities = {"all_entities": []}  # Fallback if response is invalid
-            result["entities"] = entities
-            logger.info(f"Recognized {len(entities.get('all_entities', []))} entities")
+            if not cache_entry:
+                is_complex_query = self._classify_complex_query(user_query)
+                logger.info(f"Input query: {user_query} is complex: {is_complex_query}")
+                # Step 1: Refine the query
+                # conversation_history = None
+                refined_query = self._refine_query(user_query, conversation_history) if is_complex_query else user_query
+                result["refined_query"] = refined_query
+                logger.info(f"Refined query: {refined_query}")
 
-            # Step 3: Map entities to ontology terms
-            mapped_entities = self._map_entities(entities, refined_query)
-            if hasattr(mapped_entities, 'content'):  # Handle ChatResult object
-                mapped_entities = {
-                    "classes": [],
-                    "properties": [],
-                    "instances": [],
-                    "literals": [],
-                    "unknown": entities.get("all_entities", [])
-                }
-            result["mapped_entities"] = mapped_entities
-            logger.info(f"Mapped entities to ontology terms")
+                # Step 2: Recognize entities in the query
+                entities = self._recognize_entities(refined_query)
+                if hasattr(entities, 'content'):  # Handle ChatResult object
+                    entities = {"all_entities": []}  # Fallback if response is invalid
+                result["entities"] = entities
+                logger.info(f"Recognized {len(entities.get('all_entities', []))} entities")
 
-            # Step 4: Planning 
-            plan = self._formulate_plan(refined_query)
-            result["plan"] = plan
-            logger.info("Create plan for SPARQL query successfully: {}".format(plan))
+                # Step 3: Map entities to ontology terms
+                mapped_entities = self._map_entities(entities, refined_query)
+                if hasattr(mapped_entities, 'content'):  # Handle ChatResult object
+                    mapped_entities = {
+                        "classes": [],
+                        "properties": [],
+                        "instances": [],
+                        "literals": [],
+                        "unknown": entities.get("all_entities", [])
+                    }
+                result["mapped_entities"] = mapped_entities
+                logger.info(f"Mapped entities to ontology terms")
 
-            # Step 5: Validation the plan
-            validation_result = self._validate_plan(plan, refined_query)
-            result["validation"] = validation_result
-            logger.info("Validation result: {}".format(validation_result))
-
-            if not validation_result.get("is_valid", False):
-                feedback = validation_result.get("feedback", None)
-                plan = self._formulate_plan(refined_query, feedback)
+                # Step 4: Planning.
+                plan = self._formulate_plan(refined_query) if is_complex_query else [{'step': user_query, 'sparql_type': 'SELECT', 'level': 'simple'}]
                 result["plan"] = plan
-                logger.info("Fixed plan successfully: {}".format(plan))
-                validation_result = self._validate_plan(plan, refined_query)
-                result["validation"] = validation_result
-                logger.info("Validation result: {}".format(validation_result))
+                logger.info("Create plan for SPARQL query successfully: {}".format(plan))
 
-            if validation_result.get("is_valid", False):
-                response = self._generate_response(plan, mapped_entities)
-                result["response"] = response
-                logger.info(f"Generated response successfully")
-
-                # Step 6: Execute the query if validation passed
-                executed_sparql = result.get("response", [{}])[0].get("query")
-                result["sparql"] = executed_sparql
-                logger.info("*"*300)
-                logger.info(f"executed_sparql: {result['sparql']}")
-                if executed_sparql:
-                    execution_result = self._execute_query(executed_sparql)
-                    if hasattr(execution_result, "content"):  # Handle ChatResult object
-                        execution_result = {"success": False, "error": "Query execution error occurred"}
-                    result["execution"] = execution_result
-                    logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
-
-                    # Step 7: Generate response from the execution results
-                    response = self._generate_final_response(refined_query, result["sparql"], execution_result)
-                    if hasattr(response, 'content'):  # Handle ChatResult object
-                        response = str(response.content)
-                    result["answer"] = response
-                    logger.info(f"Generated response")
+                # Step 5: Validation the plan.
+                if is_complex_query:
+                    validation_result = self._validate_plan(plan, refined_query)
                 else:
-                    error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
+                    validation_result = {"is_valid": True}
+                result["validation"] = validation_result
+                logger.info(f"Validation result: {validation_result}")
+
+                if not validation_result.get("is_valid", False) and is_complex_query:
+                    feedback = validation_result.get("feedback", None)
+                    plan = self._formulate_plan(refined_query, feedback)
+                    result["plan"] = plan
+                    logger.info("Fixed plan successfully: {}".format(plan))
+                    validation_result = self._validate_plan(plan, refined_query)
+                    result["validation"] = validation_result
+                    logger.info("Validation result: {}".format(validation_result))
+
+            if validation_result.get("is_valid", False) or cache_entry:
+                if not cache_entry:
+                    response = self._generate_response(plan, mapped_entities)
+                    result["response"] = response
+                    executed_sparql = result.get("response", [{}])[0].get("query")
+                    logger.info(f"Generated response successfully")
+                else:
+                    executed_sparql = cache_entry.get("sparql", "")
+                    refined_query = cache_entry.get("refined_query", "")
+
+                result["sparql"] = executed_sparql
+                result["response"] = [{"query": executed_sparql}]
+                if not cache_entry:
+                    # Step 6: Execute the query if validation passed
+                    logger.info("*"*300)
+                    logger.info(f"executed_sparql: {result['sparql']}")
+                    if executed_sparql:
+                        execution_result = self._execute_query(executed_sparql)
+                        if hasattr(execution_result, "content"):  # Handle ChatResult object
+                            execution_result = {"success": False, "error": "Query execution error occurred"}
+                        result["execution"] = execution_result
+                        logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
+
+                        # Step 7: Generate response from the execution results.
+                        # import pdb; pdb.set_trace()
+                        response = self._generate_final_response(refined_query or user_query, result["sparql"], execution_result)
+                        self.result_cache.save(
+                            user_query,
+                            self.query_prefix,
+                            {
+                                "answer": response,
+                                "sparql": executed_sparql,
+                                "refined_query": refined_query,
+                                "query_type": "",
+                                "template_id": "",
+                                "template_based": True,
+                                "entities_used": []
+                            }
+                        )
+                        if hasattr(response, 'content'):  # Handle ChatResult object
+                            response = str(response.content)
+                        result["answer"] = response
+                        logger.info(f"Generated response")
+                    else:
+                        error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
+                else:
+                    result["answer"] = cache_entry.get("answer", "")
             else:
                 error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
                 result["answer"] = error_response
@@ -156,6 +201,17 @@ class MasterAgent:
             logger.error(f"Error refining query: {e}")
             # Return original query if refinement fails
             return raw_query
+
+    def _classify_complex_query(self, query: str) -> bool:
+        if "query_complexity_classifier" not in self.slave_agents:
+            return False
+
+        try:
+            is_complex = self.slave_agents["query_complexity_classifier"].is_complex_query(query)
+            return is_complex
+        except Exception as e:
+            logger.error(f"Error classifying query complexity: {e}")
+            return False
 
     def _recognize_entities(self, refined_query: str) -> Dict[str, Any]:
         """Delegate entity recognition to the entity recognition slave agent."""

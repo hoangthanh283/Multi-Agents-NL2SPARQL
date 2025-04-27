@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import gradio as gr
 
@@ -24,15 +25,13 @@ query_execution_agent = QueryExecutionAgent(endpoint_url=GRAPHDB_ENDPOINT)
 def process_gradio_query(user_query, conversation_history):
     """
     Process the natural language query and update conversation history.
-    Returns: intermediate reasoning, final response, generated SPARQL query, updated history.
+    Returns: intermediate reasoning, final response, generated SPARQL query, updated history, running time.
     """
+    start_time = time.time()
     # Process the query using the master agent.
     # result = master_agent.process_query(user_query, conversation_history)
     result = process_query(master_agent, user_query, conversation_history)
 
-    # Generate intermediate reasoning from the result object
-    intermediate_reasoning = generate_intermediate_reasoning(result)
-    
     # Extract the final response and SPARQL query.
     final_answer = result.get("answer", "No final response.")
     # generated_sparql = result.get("sparql", "No SPARQL query generated.")
@@ -42,7 +41,9 @@ def process_gradio_query(user_query, conversation_history):
     # Update conversation history with the interaction.
     conversation_history.append({"role": "user", "content": user_query})
     conversation_history.append({"role": "assistant", "content": generated_sparql})
-    return intermediate_reasoning, final_answer, generated_sparql, conversation_history
+    elapsed = time.time() - start_time
+    running_time = f"{elapsed:.2f} seconds"
+    return final_answer, generated_sparql, conversation_history, running_time
 
 
 def generate_intermediate_reasoning(result):
@@ -104,7 +105,6 @@ def generate_intermediate_reasoning(result):
         query_info = "Query Information:\n"
         query_info += f"- Query Type: {metadata.get('query_type', 'Unknown')}\n"
         query_info += f"- Template-based: {metadata.get('template_based', False)}\n"
-        
         reasoning_parts.append(query_info)
     
     # Add validation results
@@ -128,7 +128,6 @@ def generate_intermediate_reasoning(result):
             execution_info += f"- Returned {results['count']} results\n"
         elif "rows" in results:
             execution_info += f"- Returned {len(results['rows'])} rows\n"
-        
         reasoning_parts.append(execution_info)
     
     # Join all reasoning parts with double line breaks
@@ -195,7 +194,7 @@ if __name__ == "__main__":
                 user_input = gr.Textbox(label="Enter your question", placeholder="Type your query here...", lines=1)
                 submit_button = gr.Button("Submit")
             with gr.Row():
-                reasoning_output = gr.Textbox(label="Intermediate Reasoning", lines=10)
+                running_time_output = gr.Textbox(label="Running Time", lines=1)
             with gr.Row():
                 final_answer_output = gr.Textbox(label="Final Answer", lines=3)
             with gr.Row():
@@ -206,7 +205,7 @@ if __name__ == "__main__":
             submit_button.click(
                 process_gradio_query,
                 inputs=[user_input, conversation_state],
-                outputs=[reasoning_output, final_answer_output, sparql_output, conversation_state]
+                outputs=[final_answer_output, sparql_output, conversation_state, running_time_output]
             )
         
         with gr.Tab("Execute SPARQL"):

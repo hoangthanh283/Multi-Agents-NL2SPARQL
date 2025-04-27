@@ -1,4 +1,5 @@
 import time
+import os
 from typing import Any, Dict, Optional
 
 from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
@@ -6,6 +7,7 @@ from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
 
 # Configure logging
 from utils.logging_utils import setup_logging
+from caches.query_cache import SPARQLQueryCache
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
@@ -19,7 +21,10 @@ class QueryExecutionAgent:
         self, 
         endpoint_url: Optional[str] = None,
         auth_token: Optional[str] = None,
-        default_graph: Optional[str] = None
+        default_graph: Optional[str] = None,
+        redis_host: str = os.getenv("REDIS_HOST", "localhost"),
+        redis_port: str = os.getenv("REDIS_PORT", "6379"),
+        redis_ttl: str = os.getenv("REDIS_TTL", "3600"),
     ):
         """
         Initialize the query execution agent.
@@ -33,15 +38,26 @@ class QueryExecutionAgent:
         self.endpoint_url = endpoint_url
         self.auth_token = auth_token
         self.default_graph = default_graph
-        
+
         # Result cache
-        self.result_cache = {}
+        if not(redis_host) or not(redis_port) or not(redis_ttl):
+            self.result_cache = {}
+        else:
+            self.result_cache = SPARQLQueryCache(
+                redis_host=redis_host,
+                redis_port=redis_port,
+                redis_ttl=redis_ttl
+            )
+        
+        # # Result cache
+        # self.result_cache = {}
         
         # Default timeout in seconds
         self.timeout = 30
         
         # Default result format
         self.result_format = JSON
+        self.query_prefix = "cache:sparql:"
         
         # Map of format strings to SPARQLWrapper constants
         self.format_map = {
@@ -59,7 +75,9 @@ class QueryExecutionAgent:
         sparql_query: str, 
         endpoint_url: Optional[str] = None,
         result_format: str = "json",
-        use_cache: bool = True
+        use_cache: bool = True,
+        user_query: Optional[str] = None,
+        context: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
         Execute a SPARQL query against an endpoint.
@@ -69,11 +87,13 @@ class QueryExecutionAgent:
             endpoint_url: Optional URL to override the default endpoint
             result_format: Format for the results (json, xml, etc.)
             use_cache: Whether to use cached results if available
+            user_query: The natural language query provided by the user
+            context: Additional context for the query
             
         Returns:
             Query execution results
         """
-        # Use provided endpoint or default.
+        # Use provided endpoint or default
         endpoint = endpoint_url or self.endpoint_url
         if not endpoint:
             return {
@@ -82,35 +102,32 @@ class QueryExecutionAgent:
             }
         format_const = self.format_map.get(result_format.lower(), JSON)
 
-        # Generate cache key if caching is enabled.
-        cache_key = None
+        cache_entry = None
         if use_cache:
-            cache_key = f"{endpoint}_{result_format}_{hash(sparql_query)}"
-            if cache_key in self.result_cache:
-                cache_entry = self.result_cache[cache_key]
-                # Check if cache is still valid (less than 5 minutes old).
-                if time.time() - cache_entry["timestamp"] < 300:
-                    logger.info(f"Using cached result for query: {sparql_query[:50]}...")
-                    return cache_entry["result"]
-
+            cache_entry = self.result_cache.search(sparql_query, self.query_prefix)
+            if cache_entry:
+                return cache_entry
+            
         try:
-            # Initialize SPARQL wrapper.
+            # Initialize SPARQL wrapper
             sparql = SPARQLWrapper(endpoint)
             sparql.setQuery(sparql_query)
             sparql.setReturnFormat(format_const)
             sparql.setTimeout(self.timeout)
 
-            # Set default graph if specified.
+            # Set default graph if specified
             if self.default_graph:
                 sparql.addDefaultGraph(self.default_graph)
 
-            # Set authentication if available.
+            # Set authentication if available
             if self.auth_token:
                 sparql.addCustomHttpHeader("Authorization", f"Bearer {self.auth_token}")
+                
             logger.info(f"Executing SPARQL query: {sparql_query[:50]}...")
             start_time = time.time()
             results = sparql.query()
             execution_time = time.time() - start_time
+            
             if format_const == JSON:
                 result_data = results.convert()
                 formatted_result = self._format_json_results(result_data, sparql_query)
@@ -142,6 +159,7 @@ class QueryExecutionAgent:
                     "data": str(result_data),
                     "info": "Raw results"
                 }
+                
             result = {
                 "success": True,
                 "execution_time": execution_time,
@@ -150,11 +168,15 @@ class QueryExecutionAgent:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "results": formatted_result
             }
-            if use_cache and cache_key:
-                self.result_cache[cache_key] = {
-                    "result": result,
-                    "timestamp": time.time()
-                }
+            if use_cache and cache_entry:
+                self.result_cache.save(
+                    sparql_query, 
+                    self.query_prefix,
+                    {
+                        "result": result,
+                        "timestamp": time.time()
+                    }
+                )
             return result
         except Exception as e:
             error_message = f"Error executing SPARQL query: {str(e)}"
@@ -165,7 +187,7 @@ class QueryExecutionAgent:
                 "endpoint": endpoint,
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
-    
+
     def _format_json_results(self, result_data: Dict[str, Any], sparql_query: str) -> Dict[str, Any]:
         """
         Format JSON results into a more usable structure.
