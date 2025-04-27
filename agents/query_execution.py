@@ -1,9 +1,8 @@
 import hashlib
-import json
+import os
 import time
 from typing import Any, Dict, Optional
 
-import redis
 from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
                            SPARQLWrapper)
 
@@ -26,9 +25,9 @@ class QueryExecutionAgent:
         redis_url: Optional[str] = None,
         auth_token: Optional[str] = None,
         default_graph: Optional[str] = None,
-        redis_host: Optional[str]=None,
-        redis_port: Optional[int]=None,
-        redis_ttl: Optional[int]=None
+        redis_host: str = os.getenv("REDIS_URL", "localhost"),
+        redis_port: str = os.getenv("REDIS_PORT", "6379"),
+        redis_ttl: str = os.getenv("REDIS_TTL", "3600"),
     ):
         """
         Initialize the query execution agent.

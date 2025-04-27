@@ -198,8 +198,7 @@ class SlavePoolManager:
             
             # Separate health check config from slave config
             health_check_config = {
-                "check_interval": pool_config.get("check_interval", 30),
-                "failure_threshold": pool_config.get("failure_threshold", 3)
+                "check_interval": pool_config.get("check_interval", 30)
             }
             
             # Remove health check related configs from slave config

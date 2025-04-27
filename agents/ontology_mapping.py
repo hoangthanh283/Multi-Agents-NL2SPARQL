@@ -22,7 +22,8 @@ class OntologyMappingAgent:
         ontology_path: Optional[str] = None,
         ontology_endpoint: Optional[str] = None,
         embedding_model_name: str = "all-MiniLM-L6-v2",
-        ontology_store: Optional[OntologyStore] = None  # Add this parameter
+        ontology_store: Optional[OntologyStore] = None,
+        **kwargs
     ):
         """
         Initialize the ontology mapping agent.

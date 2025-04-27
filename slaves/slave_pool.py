@@ -77,8 +77,7 @@ class SlavePool:
         from utils.health_checker import HealthChecker
         health_check_config = health_check_config or {}
         self.health_checker = HealthChecker(
-            check_interval=health_check_config.get('check_interval', 30),
-            failure_threshold=health_check_config.get('failure_threshold', 3)
+            check_interval=health_check_config.get('check_interval', 30)
         )
         
         # Task queue
