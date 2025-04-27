@@ -9,6 +9,18 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+plan_formulation_task_counter = Counter(
+    'plan_formulation_tasks_total',
+    'Total plan formulation tasks processed',
+    ['status', 'version']
+)
+plan_formulation_processing_time = Histogram(
+    'plan_formulation_processing_seconds',
+    'Time spent processing plan formulation tasks',
+    ['version']
+)
+
 class PlanFormulationSlave(AbstractSlave):
     """
     Slave responsible for formulating query plans.
@@ -35,19 +47,11 @@ class PlanFormulationSlave(AbstractSlave):
             plan_formulation_module = importlib.import_module('agents.plan_formulation')
             self.agent = plan_formulation_module.PlanFormulationAgent()
             self.version = 1
-        
-        # Metrics
-        self.task_counter = Counter(
-            'plan_formulation_tasks_total',
-            'Total plan formulation tasks processed',
-            ['status', 'version']
-        )
-        self.processing_time = Histogram(
-            'plan_formulation_processing_seconds',
-            'Time spent processing plan formulation tasks',
-            ['version']
-        )
-        
+
+        # Metrics (reference module-level)
+        self.task_counter = plan_formulation_task_counter
+        self.processing_time = plan_formulation_processing_time
+
         # Stats
         self.total_plans = 0
         self.successful_plans = 0

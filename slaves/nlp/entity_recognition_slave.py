@@ -10,6 +10,22 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+entity_recognition_task_counter = Counter(
+    'entity_recognition_tasks_total',
+    'Total entity recognition tasks processed',
+    ['status']
+)
+entity_recognition_processing_time = Histogram(
+    'entity_recognition_processing_seconds',
+    'Time spent processing entity recognition tasks'
+)
+entity_recognition_entity_counter = Counter(
+    'entity_recognition_entities_total',
+    'Total entities recognized',
+    ['entity_type']
+)
+
 class EntityRecognitionSlave(AbstractSlave):
     """
     Slave responsible for recognizing entities in natural language queries.
@@ -41,21 +57,10 @@ class EntityRecognitionSlave(AbstractSlave):
             logger.error(f"Error initializing EntityRecognitionSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
-        self.task_counter = Counter(
-            'entity_recognition_tasks_total',
-            'Total entity recognition tasks processed',
-            ['status']
-        )
-        self.processing_time = Histogram(
-            'entity_recognition_processing_seconds',
-            'Time spent processing entity recognition tasks'
-        )
-        self.entity_counter = Counter(
-            'entity_recognition_entities_total',
-            'Total entities recognized',
-            ['entity_type']
-        )
+        # Metrics (reference module-level)
+        self.task_counter = entity_recognition_task_counter
+        self.processing_time = entity_recognition_processing_time
+        self.entity_counter = entity_recognition_entity_counter
         
         # Stats
         self.total_processed = 0

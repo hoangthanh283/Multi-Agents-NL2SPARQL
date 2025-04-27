@@ -9,6 +9,18 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+validation_task_counter = Counter(
+    'validation_tasks_total',
+    'Total validation tasks processed',
+    ['status', 'version', 'valid']
+)
+validation_processing_time = Histogram(
+    'validation_processing_seconds',
+    'Time spent processing validation tasks',
+    ['version']
+)
+
 class ValidationSlave(AbstractSlave):
     """
     Slave responsible for validating SPARQL queries.
@@ -44,17 +56,9 @@ class ValidationSlave(AbstractSlave):
                 logger.error(f"Failed to load validation agent: {str(e)}")
                 raise ImportError("Could not import any validation agent implementation")
         
-        # Metrics
-        self.task_counter = Counter(
-            'validation_tasks_total',
-            'Total validation tasks processed',
-            ['status', 'version', 'valid']
-        )
-        self.processing_time = Histogram(
-            'validation_processing_seconds',
-            'Time spent processing validation tasks',
-            ['version']
-        )
+        # Metrics (reference module-level)
+        self.task_counter = validation_task_counter
+        self.processing_time = validation_processing_time
         
         # Stats
         self.total_validated = 0

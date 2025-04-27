@@ -71,6 +71,8 @@ services:
       - ./data/graphdb:/opt/graphdb/home
       - ./data/ontologies:/root/ontologies
       - ./config/graphdb/cluster-config.ttl:/opt/graphdb/conf/cluster-config.ttl
+    tmpfs:
+      - /opt/graphdb/home/work/tmp
 
   # Kong API Gateway
   kong:

@@ -10,6 +10,17 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+response_generation_task_counter = Counter(
+    'response_generation_tasks_total',
+    'Total response generation tasks processed',
+    ['status']
+)
+response_generation_processing_time = Histogram(
+    'response_generation_processing_seconds',
+    'Time spent processing response generation tasks'
+)
+
 class ResponseGenerationSlave(AbstractSlave):
     """
     Slave responsible for generating natural language responses from SPARQL query results.
@@ -39,16 +50,9 @@ class ResponseGenerationSlave(AbstractSlave):
             logger.error(f"Error initializing ResponseGenerationSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
-        self.task_counter = Counter(
-            'response_generation_tasks_total',
-            'Total response generation tasks processed',
-            ['status']
-        )
-        self.processing_time = Histogram(
-            'response_generation_processing_seconds',
-            'Time spent processing response generation tasks'
-        )
+        # Metrics (reference module-level)
+        self.task_counter = response_generation_task_counter
+        self.processing_time = response_generation_processing_time
         
         # Stats
         self.total_processed = 0

@@ -10,6 +10,17 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+query_execution_task_counter = Counter(
+    'query_execution_tasks_total',
+    'Total query execution tasks processed',
+    ['status']
+)
+query_execution_processing_time = Histogram(
+    'query_execution_processing_seconds',
+    'Time spent processing query execution tasks'
+)
+
 class QueryExecutionSlave(AbstractSlave):
     """
     Slave responsible for executing SPARQL queries against an endpoint.
@@ -42,16 +53,9 @@ class QueryExecutionSlave(AbstractSlave):
             logger.error(f"Error initializing QueryExecutionSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
-        self.task_counter = Counter(
-            'query_execution_tasks_total',
-            'Total query execution tasks processed',
-            ['status']
-        )
-        self.processing_time = Histogram(
-            'query_execution_processing_seconds',
-            'Time spent processing query execution tasks'
-        )
+        # Metrics (reference module-level)
+        self.task_counter = query_execution_task_counter
+        self.processing_time = query_execution_processing_time
         
         # Stats
         self.total_processed = 0

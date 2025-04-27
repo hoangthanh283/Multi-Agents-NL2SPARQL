@@ -11,6 +11,22 @@ from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
+# Metrics (module-level, not per-instance)
+ontology_mapping_task_counter = Counter(
+    'ontology_mapping_tasks_total',
+    'Total ontology mapping tasks processed',
+    ['status']
+)
+ontology_mapping_processing_time = Histogram(
+    'ontology_mapping_processing_seconds',
+    'Time spent processing ontology mapping tasks'
+)
+ontology_mapping_entity_counter = Counter(
+    'ontology_mapping_entities_total',
+    'Total entities mapped to ontology concepts',
+    ['mapped_status']
+)
+
 class OntologyMappingSlave(AbstractSlave):
     """
     Slave responsible for mapping entities to ontology concepts.
@@ -49,21 +65,10 @@ class OntologyMappingSlave(AbstractSlave):
             # Create a placeholder adapter that will be properly initialized later
             self.agent_adapter = None
         
-        # Metrics
-        self.task_counter = Counter(
-            'ontology_mapping_tasks_total',
-            'Total ontology mapping tasks processed',
-            ['status']
-        )
-        self.processing_time = Histogram(
-            'ontology_mapping_processing_seconds',
-            'Time spent processing ontology mapping tasks'
-        )
-        self.entity_counter = Counter(
-            'ontology_mapping_entities_total',
-            'Total entities mapped to ontology concepts',
-            ['mapped_status']
-        )
+        # Metrics (reference module-level)
+        self.task_counter = ontology_mapping_task_counter
+        self.processing_time = ontology_mapping_processing_time
+        self.entity_counter = ontology_mapping_entity_counter
         
         # Stats
         self.total_processed = 0
