@@ -6,9 +6,9 @@ from adapters.agent_adapter import AgentAdapter
 from agents.entity_recognition import EntityRecognitionAgent
 from agents.query_refinement import QueryRefinementAgent
 from database.ontology_store import OntologyStore
-from database.qdrant_client import QdrantClient
 from master.base import DomainMaster
 from models.entity_recognition import GLiNERModel
+from utils.constants import QDRANT_CLIENT_SINGLETON
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -23,16 +23,15 @@ class NLPDomainMaster(DomainMaster):
     - Initial NLP preprocessing
     """
     
-    def __init__(self, redis_url: str, ontology_store: OntologyStore, qdrant_client: QdrantClient = None):
+    def __init__(self, redis_url: str, ontology_store: OntologyStore):
         """
         Initialize the NLP domain master.
         
         Args:
             redis_url: Redis URL for communication
             ontology_store: OntologyStore instance for entity recognition
-            qdrant_client: QdrantClient instance for entity embedding storage
         """
-        super().__init__("nlp", redis_url, qdrant_client)
+        super().__init__("nlp", redis_url)
         
         # Store ontology store
         self.ontology_store = ontology_store
@@ -41,9 +40,7 @@ class NLPDomainMaster(DomainMaster):
         try:
             # Query refinement agent
             self.query_refinement = AgentAdapter(
-                agent_instance=QueryRefinementAgent(
-                    qdrant_client=qdrant_client
-                ),
+                agent_instance=QueryRefinementAgent(),
                 agent_type="query_refinement"
             )
             logger.info("Query refinement agent initialized")

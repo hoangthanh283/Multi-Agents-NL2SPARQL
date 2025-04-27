@@ -7,9 +7,9 @@ import redis
 from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
                            SPARQLWrapper)
 
+from caches.query_cache import SPARQLQueryCache
 # Configure logging
 from utils.logging_utils import setup_logging
-from caches.query_cache import SPARQLQueryCache
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 

@@ -6,8 +6,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
 from config.agent_config import get_agent_config
-from database.qdrant_client import QdrantClient
-from utils.constants import QDRANT_SEARCH_THRESHOLD, TOP_K_DRANT_QUERIES
+from utils.constants import (QDRANT_CLIENT_SINGLETON, QDRANT_SEARCH_THRESHOLD,
+                             TOP_K_DRANT_QUERIES)
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -22,7 +22,6 @@ class ResponseGenerationAgent:
             model="gpt-4o-mini",
             temperature=0.
         )
-        self.qdrant_client = QdrantClient()
         self.num_retry = 2
         self.top_k = TOP_K_DRANT_QUERIES
         self.collection_name = "ontology_embedding"
@@ -140,18 +139,18 @@ class ResponseGenerationAgent:
         Returns:
             Part of ontology related to step query
         """
-        search_results = self.qdrant_client.client.query_points(
+        search_results = QDRANT_CLIENT_SINGLETON.client.query_points(
             collection_name=self.collection_name,
-            query=self.qdrant_client.default_model.encode(step_query),
+            query=QDRANT_CLIENT_SINGLETON.default_model.encode(step_query),
             score_threshold=QDRANT_SEARCH_THRESHOLD,
             limit=self.top_k
         ).points
 
         # If we could not find any match, then use the top-2 matches that can be find.
         if not search_results:
-            search_results = self.qdrant_client.client.query_points(
+            search_results = QDRANT_CLIENT_SINGLETON.client.query_points(
                 collection_name=self.collection_name,
-                query=self.qdrant_client.default_model.encode(step_query),
+                query=QDRANT_CLIENT_SINGLETON.default_model.encode(step_query),
                 limit=2
             ).points
 

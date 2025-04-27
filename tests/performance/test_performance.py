@@ -210,5 +210,6 @@ async def test_long_running_stability():
     assert stats['p99'] < 1.0  # 99th percentile should remain stable
     assert stats['std_dev'] < 0.5  # Low variance in response times
 
+
 if __name__ == "__main__":
     pytest.main(["-v", "test_performance.py"])

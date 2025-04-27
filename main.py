@@ -20,10 +20,9 @@ from agents.response_generation_2 import ResponseGenerationAgent
 from agents.sparql_construction import SPARQLConstructionAgent
 from agents.validation_2 import ValidationAgent
 from database.elastic_client import ElasticClient
-from database.qdrant_client import QdrantClient
 from models.embeddings import BiEncoderModel, CrossEncoderModel
 from models.entity_recognition import GLiNERModel
-from utils.constants import QdrantCollections
+from utils.constants import QDRANT_CLIENT_SINGLETON, QdrantCollections
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -37,12 +36,11 @@ def initialize_databases():
     logger.info("Initializing databases...")
     
     # Initialize Qdrant client.
-    qdrant_client = QdrantClient(url=os.getenv("QDRANT_URL"))
     for collection in QdrantCollections:
         collection_name = collection.value
-        if not qdrant_client.collection_exists(collection_name):
+        if not QDRANT_CLIENT_SINGLETON.collection_exists(collection_name):
             logger.info(f"Creating Qdrant collection: {collection_name}")
-            qdrant_client.create_collection(collection_name)
+            QDRANT_CLIENT_SINGLETON.create_collection(collection_name)
             if collection_name == QdrantCollections.ONTOLOGY_EMBEDDING.value:
                 # Split Ontology into sections then embed and upsert them to Qdrant. 
                 ontology_file_path = os.getenv("ONTOLOGY_PATH")
@@ -53,20 +51,19 @@ def initialize_databases():
                 code_parts = data.split("\n\n\n")
                 points = []
                 for idx, code_part in tqdm(enumerate(code_parts)):
-                    embedding = qdrant_client.default_model.encode(code_part)
+                    embedding = QDRANT_CLIENT_SINGLETON.default_model.encode(code_part)
                     point = {
                         "id": idx,
                         "vector": embedding.tolist(),
                         "payload": {"code": code_part}
                     }
                     points.append(point)
-                qdrant_client.upsert_points(collection_name, points)
+                QDRANT_CLIENT_SINGLETON.upsert_points(collection_name, points)
     
     # Initialize Elasticsearch client
     elastic_client = ElasticClient(url=os.getenv("ELASTICSEARCH_URL"))
     elastic_client.initialize_indices()
-    
-    return qdrant_client, elastic_client
+    return elastic_client
 
 
 def initialize_models():
@@ -88,12 +85,9 @@ def initialize_models():
     return bi_encoder, cross_encoder, entity_recognition_model
 
 
-def create_master_agent(qdrant_client, elastic_client, bi_encoder, entity_recognition_model):
+def create_master_agent(elastic_client, bi_encoder, entity_recognition_model):
     master_agent = MasterAgent()
-    query_refinement_agent = QueryRefinementAgent(
-        qdrant_client=qdrant_client,
-        embedding_model=bi_encoder
-    )
+    query_refinement_agent = QueryRefinementAgent(embedding_model=bi_encoder)
     entity_recognition_agent = EntityRecognitionAgent(
         entity_recognition_model=entity_recognition_model, 
         ontology_store=None
@@ -175,11 +169,11 @@ def main():
     logger.info("Starting Natural Language to SPARQL conversion system...")
     
     # Initialize components
-    qdrant_client, elastic_client = initialize_databases()
+    elastic_client = initialize_databases()
     bi_encoder, _, entity_recognition_model = initialize_models()
 
     # Initialize master agent with all slave agents
-    master_agent = create_master_agent(qdrant_client, elastic_client, bi_encoder, entity_recognition_model)
+    master_agent = create_master_agent(elastic_client, bi_encoder, entity_recognition_model)
     interactive_session(master_agent)
     logger.info("NL to SPARQL conversion system terminated.")
 

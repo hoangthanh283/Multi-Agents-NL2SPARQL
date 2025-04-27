@@ -1,10 +1,12 @@
-from elasticsearch import Elasticsearch
-from redis import Redis
-import json
 import hashlib
-from typing import Dict, Any, Optional, List, Tuple
-from loguru import logger
+import json
 import time
+from typing import Any, Dict, List, Optional, Tuple
+
+from elasticsearch import Elasticsearch
+from loguru import logger
+from redis import Redis
+
 
 class QueryCache:
     def __init__(self, redis_host: str, redis_port: str, redis_ttl: int):

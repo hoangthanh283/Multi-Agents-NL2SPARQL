@@ -4,9 +4,9 @@ import autogen
 import numpy as np
 
 from config.agent_config import get_agent_config
-from database.qdrant_client import QdrantClient
 from models.embeddings import BiEncoderModel
-from utils.constants import VECTOR_SIMILARITY_THRESHOLD
+from utils.constants import (QDRANT_CLIENT_SINGLETON,
+                             VECTOR_SIMILARITY_THRESHOLD)
 
 
 class QueryRefinementAgent:
@@ -16,12 +16,11 @@ class QueryRefinementAgent:
     well-structured queries that can be processed by the system.
     """
     
-    def __init__(self, qdrant_client: QdrantClient, embedding_model: Optional[BiEncoderModel] = None):
+    def __init__(self, embedding_model: Optional[BiEncoderModel] = None):
         """
         Initialize the query refinement agent.
         
         Args:
-            qdrant_client: Client for the vector database
             embedding_model: Embedding model for semantic matching
         """
         # Get configuration for query refinement agent
@@ -40,9 +39,6 @@ class QueryRefinementAgent:
             human_input_mode="NEVER",
             is_termination_msg=lambda x: True,  # Always terminate after one response
         )
-        
-        # Store vector database client
-        self.qdrant_client = qdrant_client
         
         # Store or initialize embedding model
         self.embedding_model = embedding_model or BiEncoderModel()
@@ -174,7 +170,7 @@ class QueryRefinementAgent:
         """
         try:
             # Search for similar examples in the vector database
-            search_results = self.qdrant_client.search(
+            search_results = QDRANT_CLIENT_SINGLETON.search(
                 collection_name=self.examples_collection,
                 query_text=query,
                 embedding_model=self.embedding_model,
@@ -318,7 +314,7 @@ Include specific entity names whenever they're referenced directly or indirectly
             example_id = hashlib.md5(f"{conversation_history}|{original_query}|{refined_query}".encode()).hexdigest()
             
             # Store the example in the vector database
-            self.qdrant_client.upsert_points(
+            QDRANT_CLIENT_SINGLETON.upsert_points(
                 collection_name=self.examples_collection,
                 points=[
                     {

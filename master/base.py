@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional
 import redis
 from prometheus_client import Counter, Gauge, Histogram
 
-from database.qdrant_client import QdrantClient
 from utils.logging_utils import setup_logging
 
 logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
@@ -21,7 +20,7 @@ class DomainMaster:
     - Communicating results back to the global master
     """
     
-    def __init__(self, domain: str, redis_url: str, qdrant_client: QdrantClient = None):
+    def __init__(self, domain: str, redis_url: str):
         """
         Initialize the domain master.
         

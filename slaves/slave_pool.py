@@ -28,7 +28,8 @@ class SlavePool:
         redis_url: str,
         initial_size: int = 2,
         max_size: int = 10,
-        slave_config: Dict[str, Any] = None
+        slave_config: Dict[str, Any] = None,
+        health_check_config: Dict[str, Any] = None
     ):
         """
         Initialize the slave pool.
@@ -41,6 +42,7 @@ class SlavePool:
             initial_size: Initial number of slaves to create
             max_size: Maximum number of slaves allowed in this pool
             slave_config: Configuration to pass to each slave instance
+            health_check_config: Configuration for the health checker
         """
         self.domain = domain
         self.slave_type = slave_type
@@ -72,11 +74,11 @@ class SlavePool:
         
         # Load balancer and health checker
         self.load_balancer = LoadBalancer()
-        from utils.health_checker import \
-            HealthChecker  # Move this import to break the circular dependency
+        from utils.health_checker import HealthChecker
+        health_check_config = health_check_config or {}
         self.health_checker = HealthChecker(
-            check_interval=30,
-            failure_threshold=3
+            check_interval=health_check_config.get('check_interval', 30),
+            failure_threshold=health_check_config.get('failure_threshold', 3)
         )
         
         # Task queue

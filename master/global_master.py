@@ -10,7 +10,6 @@ from prometheus_client import Counter, Gauge, Histogram
 
 from database.elastic_client import ElasticClient
 from database.ontology_store import OntologyStore
-from database.qdrant_client import QdrantClient
 from master.nlp_master import NLPDomainMaster
 from master.query_master import QueryDomainMaster
 from master.response_master import ResponseDomainMaster
@@ -56,13 +55,10 @@ class GlobalMaster:
             endpoint_url=endpoint_url,
             redis_url=redis_url
         )
-        
-        # Create Qdrant client for entity recognition
-        qdrant_client = QdrantClient()
-        
+
         # Initialize domain masters
         self.domain_masters = {
-            "nlp": NLPDomainMaster(redis_url, ontology_store, qdrant_client),
+            "nlp": NLPDomainMaster(redis_url, ontology_store),
             "query": QueryDomainMaster(redis_url, ontology_store),
             "response": ResponseDomainMaster(redis_url, endpoint_url)
         }

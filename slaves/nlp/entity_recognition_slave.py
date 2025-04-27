@@ -24,10 +24,12 @@ class EntityRecognitionSlave(AbstractSlave):
             config: Configuration dictionary
         """
         self.config = config or {}
-        
         try:
             # Initialize the entity recognition agent
-            agent = EntityRecognitionAgent()
+            agent = EntityRecognitionAgent(
+                entity_recognition_model=self.config.get("entity_recognition_model"), 
+                ontology_store=self.config.get("ontology_store")
+            )
             
             # Wrap the agent with an adapter
             self.agent_adapter = AgentAdapter(

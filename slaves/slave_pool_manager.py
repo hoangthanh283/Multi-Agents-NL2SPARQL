@@ -195,7 +195,19 @@ class SlavePoolManager:
             # Set defaults if not provided
             initial_size = pool_config.get("initial_size", 2)
             max_size = pool_config.get("max_size", 10)
-            slave_config = pool_config.get("slave_config", {})
+            
+            # Separate health check config from slave config
+            health_check_config = {
+                "check_interval": pool_config.get("check_interval", 30),
+                "failure_threshold": pool_config.get("failure_threshold", 3)
+            }
+            
+            # Remove health check related configs from slave config
+            slave_config = pool_config.get("slave_config", {}).copy()
+            if "failure_threshold" in slave_config:
+                del slave_config["failure_threshold"]
+            if "check_interval" in slave_config:
+                del slave_config["check_interval"]
             
             try:
                 # Create and start the pool
@@ -206,7 +218,8 @@ class SlavePoolManager:
                     redis_url=self.redis_url,
                     initial_size=initial_size,
                     max_size=max_size,
-                    slave_config=slave_config
+                    slave_config=slave_config,
+                    health_check_config=health_check_config
                 )
                 pool.start()
                 

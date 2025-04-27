@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-import requests
-import subprocess
-import json
-import time
 import argparse
-from typing import Dict, Any, Optional, List
+import json
+import subprocess
+import time
+from typing import Any, Dict, List, Optional
+
+import requests
+
 
 class NL2SPARQLClient:
     """Client for interacting with the NL2SPARQL API in Kubernetes"""
