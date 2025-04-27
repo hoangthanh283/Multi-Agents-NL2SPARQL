@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import autogen
 
 from config.agent_config import get_agent_config
+from caches.query_cache import ConstructionQueryCache
 
 
 class SPARQLConstructionAgent:
@@ -13,7 +14,9 @@ class SPARQLConstructionAgent:
     Builds queries based on intent, mapped entities, and query patterns.
     """
     
-    def __init__(self, templates_dir: Optional[str] = None):
+    def __init__(self, templates_dir: Optional[str] = None, redis_host: Optional[str]=None, redis_port: Optional[int]=None,
+                 es_host: Optional[str]=None, es_port: Optional[int]=None, es_index: Optional[str]=None,
+                 similarity_threshold: Optional[float]=None, redis_ttl: Optional[int]=None):
         """
         Initialize the SPARQL construction agent.
         
@@ -48,6 +51,21 @@ class SPARQLConstructionAgent:
             "owl": "http://www.w3.org/2002/07/owl#",
             "xsd": "http://www.w3.org/2001/XMLSchema#"
         }
+        
+        if not(redis_host) or not(redis_port) or not(redis_ttl) or not(es_host) or not(es_port) or not(es_index) or not(similarity_threshold) or not(redis_ttl):
+            self.result_cache = None
+        else:
+            self.result_cache = ConstructionQueryCache(
+                redis_host=redis_host,
+                redis_port=redis_port,
+                redis_ttl=redis_ttl,
+                es_host=es_host,
+                es_port=es_port,
+                es_index=es_index,
+                similarity_threshold=similarity_threshold
+            )
+            
+        self.query_prefix = "cache:query:"
     
     def construct_query(
         self, 
@@ -66,6 +84,12 @@ class SPARQLConstructionAgent:
         Returns:
             Dictionary containing the SPARQL query and metadata
         """
+        cache_entry = None
+        if self.result_cache:
+            cache_entry = self.result_cache.search(refined_query, self.query_prefix)
+            if cache_entry:
+                return cache_entry
+        
         # Determine query type if not provided
         if not query_type:
             query_type = self._determine_query_type(refined_query, mapped_entities)
@@ -93,7 +117,14 @@ class SPARQLConstructionAgent:
                 # Fall back to LLM-based construction
         
         # If no template found or template filling failed, use LLM
-        return self._llm_based_construction(refined_query, mapped_entities, query_type)
+        # return self._llm_based_construction(refined_query, mapped_entities, query_type)
+        result = self._llm_based_construction(refined_query, mapped_entities, query_type)
+        if cache_entry:
+            self.result_cache.save(
+                refined_query,
+                result
+            )
+        return result
     
     def _load_templates(self) -> List[Dict[str, Any]]:
         """Load SPARQL query templates from the templates directory."""

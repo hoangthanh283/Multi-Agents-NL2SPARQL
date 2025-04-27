@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 import redis
 from SPARQLWrapper import (CSV, JSON, N3, RDFXML, TSV, TURTLE, XML,
                            SPARQLWrapper)
+from caches.query_cache import SPARQLQueryCache
 
 # Configure logging
 from utils.logging_utils import setup_logging
@@ -25,7 +26,10 @@ class QueryExecutionAgent:
         redis_url: Optional[str] = None,
         auth_token: Optional[str] = None,
         default_graph: Optional[str] = None,
-        elastic_client: Optional[Any] = None
+        elastic_client: Optional[Any] = None,
+        redis_host: Optional[str]=None,
+        redis_port: Optional[int]=None,
+        redis_ttl: Optional[int]=None
     ):
         """
         Initialize the query execution agent.
@@ -72,6 +76,17 @@ class QueryExecutionAgent:
         }
         
         self.elastic_client = elastic_client
+        self.result_cache = None
+        self.query_prefix = "cache:sparql:"
+    
+        if not(redis_host) or not(redis_port) or not(redis_ttl):
+            self.result_cache = None
+        else:
+            self.result_cache = SPARQLQueryCache(
+                redis_host=redis_host,
+                redis_port=redis_port,
+                redis_ttl=redis_ttl
+            )
         
     def _generate_cache_key(self, endpoint: str, sparql_query: str, result_format: str) -> str:
         """
@@ -120,6 +135,18 @@ class QueryExecutionAgent:
         Returns:
             Query execution results
         """
+        if use_cache and self.result_cache:
+            try:
+                cache_output = self.result_cache.search(
+                    sparql_query, 
+                    self.query_prefix
+                )
+                if cache_output:
+                    return cache_output
+
+            except Exception as e:
+                logger.warning(f"Error accessing Redis/Elasticsearch cache: {e}")
+        
         # Use provided endpoint or default
         endpoint = endpoint_url or self.endpoint_url
         if not endpoint:
@@ -130,34 +157,33 @@ class QueryExecutionAgent:
         format_const = self.format_map.get(result_format.lower(), JSON)
 
         # Try to get cached result if caching is enabled
-        if use_cache and self.redis_client:
-            try:
-                cache_key = self._generate_cache_key(endpoint, sparql_query, result_format)
-                cached_data = self.redis_client.get(cache_key)
+#         if use_cache and self.redis_client:
+#             try:
+#                 cache_key = self._generate_cache_key(endpoint, sparql_query, result_format)
+#                 cached_data = self.redis_client.get(cache_key)
                 
-                if cached_data:
-                    cached_result = json.loads(cached_data)
-                    cached_result["from_cache"] = True
-                    logger.info(f"Redis cache hit for SPARQL query: {sparql_query[:50]}...")
-                    return cached_result
-                else:
-                    logger.debug(f"Redis cache miss for SPARQL query: {sparql_query[:50]}...")
-                    # Fallback to Elasticsearch if available and user_query is provided
-                    if self.elastic_client and user_query:
-                        es_result = self.elastic_client.search_similar_query(user_query)
-                        if es_result and es_result.get("sparql_query"):
-                            logger.info(f"Elasticsearch hit for user query: {user_query[:50]}...")
-                            return {
-                                "success": True,
-                                "from_cache": True,
-                                "cache_type": "elasticsearch",
-                                "sparql_query": es_result["sparql_query"],
-                                "response": es_result.get("response", ""),
-                                "score": es_result.get("score", 0),
-                                "timestamp": es_result.get("timestamp", None)
-                            }
-            except Exception as e:
-                logger.warning(f"Error accessing Redis/Elasticsearch cache: {e}")
+#                 if cached_data:
+#                     cached_result = json.loads(cached_data)
+#                     cached_result["from_cache"] = True
+#                     logger.info(f"Redis cache hit for SPARQL query: {sparql_query[:50]}...")
+#                     return cached_result
+#                 else:
+#                     logger.debug(f"Redis cache miss for SPARQL query: {sparql_query[:50]}...")
+#                     # Fallback to Elasticsearch if available and user_query is provided
+#                     if self.elastic_client and user_query:
+#                         es_result = self.elastic_client.search_similar_query(user_query)
+#                         if es_result and es_result.get("sparql_query"):
+#                             logger.info(f"Elasticsearch hit for user query: {user_query[:50]}...")
+#                             return {
+#                                 "success": True,
+#                                 "from_cache": True,
+#                                 "cache_type": "elasticsearch",
+#                                 "sparql_query": es_result["sparql_query"],
+#                                 "response": es_result.get("response", ""),
+#                                 "score": es_result.get("score", 0),
+#                                 "timestamp": es_result.get("timestamp", None)
+#                             }
+        
         
         try:
             # Initialize SPARQL wrapper
@@ -219,34 +245,43 @@ class QueryExecutionAgent:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
                 "results": formatted_result
             }
+            if use_cache and self.result_cache:
+                self.result_cache.save(
+                    sparql_query, 
+                    self.query_prefix,
+                    {
+                        "result": result,
+                        "timestamp": time.time()
+                    }
+                )
             
             # Cache successful results in Redis
-            if use_cache and self.redis_client:
-                try:
-                    cache_key = self._generate_cache_key(endpoint, sparql_query, result_format)
-                    self.redis_client.setex(
-                        cache_key,
-                        self.cache_expiry,
-                        json.dumps(result)
-                    )
-                    logger.debug(f"Cached SPARQL result in Redis for query: {sparql_query[:50]}...")
-                except Exception as e:
-                    logger.warning(f"Error caching result in Redis: {e}")
+#             if use_cache and self.redis_client:
+#                 try:
+#                     cache_key = self._generate_cache_key(endpoint, sparql_query, result_format)
+#                     self.redis_client.setex(
+#                         cache_key,
+#                         self.cache_expiry,
+#                         json.dumps(result)
+#                     )
+#                     logger.debug(f"Cached SPARQL result in Redis for query: {sparql_query[:50]}...")
+#                 except Exception as e:
+#                     logger.warning(f"Error caching result in Redis: {e}")
                     
-            # Store in Elasticsearch if available and user_query is provided
-            if self.elastic_client and user_query:
-                try:
-                    self.elastic_client.store_query_sparql_pair({
-                        "natural_query": user_query,
-                        "sparql_query": sparql_query,
-                        "response": result.get("results", {}),
-                        "successful": result.get("success", False),
-                        "execution_time": result.get("execution_time", 0),
-                        "timestamp": result.get("timestamp", None),
-                        "context": context or ""
-                    })
-                except Exception as e:
-                    logger.warning(f"Error storing query-SPARQL pair in Elasticsearch: {e}")
+#             # Store in Elasticsearch if available and user_query is provided
+#             if self.elastic_client and user_query:
+#                 try:
+#                     self.elastic_client.store_query_sparql_pair({
+#                         "natural_query": user_query,
+#                         "sparql_query": sparql_query,
+#                         "response": result.get("results", {}),
+#                         "successful": result.get("success", False),
+#                         "execution_time": result.get("execution_time", 0),
+#                         "timestamp": result.get("timestamp", None),
+#                         "context": context or ""
+#                     })
+#                 except Exception as e:
+#                     logger.warning(f"Error storing query-SPARQL pair in Elasticsearch: {e}")
                     
             return result
         except Exception as e:
