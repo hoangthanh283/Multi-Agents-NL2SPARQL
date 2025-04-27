@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from typing import Any, Dict, List
 
 import autogen
@@ -71,32 +72,46 @@ class MasterAgent:
         Returns:
             SPARQL query
         """
+        process_start_time = time.time()
         logger.info(f"Processing query: {user_query}")
-        result = {"original_query": user_query, "conversation_history": conversation_history}
+        result = {"original_query": user_query, "conversation_history": conversation_history, "latency": {}}
         try:
             cache_entry = None
             validation_result = {}
             refined_query = None
+            
+            # Cache check latency
+            cache_check_start = time.time()
             if self.result_cache:
                 cache_entry = self.result_cache.search(user_query, self.query_prefix)
+            result["latency"]["cache_check"] = time.time() - cache_check_start
+            logger.info(f"Cache check completed in {result['latency']['cache_check']:.2f}s")
 
             if not cache_entry:
+                # Step 0: Query complexity classification
+                complexity_start = time.time()
                 is_complex_query = self._classify_complex_query(user_query)
-                logger.info(f"Input query: {user_query} is complex: {is_complex_query}")
+                result["latency"]["complexity_classification"] = time.time() - complexity_start
+                logger.info(f"Input query: {user_query} is complex: {is_complex_query} (took {result['latency']['complexity_classification']:.2f}s)")
+                
                 # Step 1: Refine the query
-                # conversation_history = None
+                refinement_start = time.time()
                 refined_query = self._refine_query(user_query, conversation_history) if is_complex_query else user_query
                 result["refined_query"] = refined_query
-                logger.info(f"Refined query: {refined_query}")
+                result["latency"]["query_refinement"] = time.time() - refinement_start
+                logger.info(f"Refined query: {refined_query} (took {result['latency']['query_refinement']:.2f}s)")
 
                 # Step 2: Recognize entities in the query
+                entity_recognition_start = time.time()
                 entities = self._recognize_entities(refined_query)
                 if hasattr(entities, 'content'):  # Handle ChatResult object
                     entities = {"all_entities": []}  # Fallback if response is invalid
                 result["entities"] = entities
-                logger.info(f"Recognized {len(entities.get('all_entities', []))} entities")
+                result["latency"]["entity_recognition"] = time.time() - entity_recognition_start
+                logger.info(f"Recognized {len(entities.get('all_entities', []))} entities (took {result['latency']['entity_recognition']:.2f}s)")
 
                 # Step 3: Map entities to ontology terms
+                entity_mapping_start = time.time()
                 mapped_entities = self._map_entities(entities, refined_query)
                 if hasattr(mapped_entities, 'content'):  # Handle ChatResult object
                     mapped_entities = {
@@ -107,36 +122,49 @@ class MasterAgent:
                         "unknown": entities.get("all_entities", [])
                     }
                 result["mapped_entities"] = mapped_entities
-                logger.info(f"Mapped entities to ontology terms")
+                result["latency"]["entity_mapping"] = time.time() - entity_mapping_start
+                logger.info(f"Mapped entities to ontology terms (took {result['latency']['entity_mapping']:.2f}s)")
 
-                # Step 4: Planning.
+                # Step 4: Planning
+                planning_start = time.time()
                 plan = self._formulate_plan(refined_query) if is_complex_query else [{'step': user_query, 'sparql_type': 'SELECT', 'level': 'simple'}]
                 result["plan"] = plan
-                logger.info("Create plan for SPARQL query successfully: {}".format(plan))
+                result["latency"]["planning"] = time.time() - planning_start
+                logger.info(f"Created plan for SPARQL query successfully (took {result['latency']['planning']:.2f}s): {plan}")
 
-                # Step 5: Validation the plan.
+                # Step 5: Validation of the plan
+                validation_start = time.time()
                 if is_complex_query:
                     validation_result = self._validate_plan(plan, refined_query)
                 else:
                     validation_result = {"is_valid": True}
                 result["validation"] = validation_result
-                logger.info(f"Validation result: {validation_result}")
+                result["latency"]["initial_validation"] = time.time() - validation_start
+                logger.info(f"Validation result (took {result['latency']['initial_validation']:.2f}s): {validation_result}")
 
+                # Step 5b: Fix plan if validation failed
                 if not validation_result.get("is_valid", False) and is_complex_query:
+                    fix_plan_start = time.time()
                     feedback = validation_result.get("feedback", None)
                     plan = self._formulate_plan(refined_query, feedback)
                     result["plan"] = plan
-                    logger.info("Fixed plan successfully: {}".format(plan))
+                    result["latency"]["plan_fixing"] = time.time() - fix_plan_start
+                    logger.info(f"Fixed plan (took {result['latency']['plan_fixing']:.2f}s): {plan}")
+                    
+                    revalidation_start = time.time()
                     validation_result = self._validate_plan(plan, refined_query)
                     result["validation"] = validation_result
-                    logger.info("Validation result: {}".format(validation_result))
+                    result["latency"]["revalidation"] = time.time() - revalidation_start
+                    logger.info(f"Revalidation result (took {result['latency']['revalidation']:.2f}s): {validation_result}")
 
             if validation_result.get("is_valid", False) or cache_entry:
                 if not cache_entry:
+                    response_generation_start = time.time()
                     response = self._generate_response(plan, mapped_entities)
                     result["response"] = response
+                    result["latency"]["response_generation"] = time.time() - response_generation_start
                     executed_sparql = result.get("response", [{}])[0].get("query")
-                    logger.info(f"Generated response successfully")
+                    logger.info(f"Generated response successfully (took {result['latency']['response_generation']:.2f}s)")
                 else:
                     executed_sparql = cache_entry.get("sparql", "")
                     refined_query = cache_entry.get("refined_query", "")
@@ -148,15 +176,20 @@ class MasterAgent:
                     logger.info("*"*300)
                     logger.info(f"executed_sparql: {result['sparql']}")
                     if executed_sparql:
+                        execution_start = time.time()
                         execution_result = self._execute_query(executed_sparql)
                         if hasattr(execution_result, "content"):  # Handle ChatResult object
                             execution_result = {"success": False, "error": "Query execution error occurred"}
                         result["execution"] = execution_result
-                        logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'}")
+                        result["latency"]["query_execution"] = time.time() - execution_start
+                        logger.info(f"Query execution {'successful' if execution_result.get('success', False) else 'failed'} (took {result['latency']['query_execution']:.2f}s)")
 
-                        # Step 7: Generate response from the execution results.
-                        # import pdb; pdb.set_trace()
+                        # Step 7: Generate response from the execution results
+                        final_response_start = time.time()
                         response = self._generate_final_response(refined_query or user_query, result["sparql"], execution_result)
+                        
+                        # Cache saving latency
+                        cache_save_start = time.time()
                         self.result_cache.save(
                             user_query,
                             self.query_prefix,
@@ -170,22 +203,33 @@ class MasterAgent:
                                 "entities_used": []
                             }
                         )
+                        result["latency"]["cache_saving"] = time.time() - cache_save_start
+                        
                         if hasattr(response, 'content'):  # Handle ChatResult object
                             response = str(response.content)
                         result["answer"] = response
-                        logger.info(f"Generated response")
+                        result["latency"]["final_response_generation"] = time.time() - final_response_start
+                        logger.info(f"Generated final response (took {result['latency']['final_response_generation']:.2f}s)")
                     else:
                         error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
                 else:
                     result["answer"] = cache_entry.get("answer", "")
+                    logger.info("Using cached response")
             else:
                 error_response = f"I'm sorry, but I couldn't create a valid SPARQL query for your question. {validation_result.get('feedback', '')}"
                 result["answer"] = error_response
                 logger.info(f"Generated error response due to validation failure")
+                
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             result["error"] = str(e)
             result["answer"] = f"I'm sorry, but an error occurred while processing your question: {str(e)}"
+            
+        # Total processing time
+        total_time = time.time() - process_start_time
+        result["latency"]["total_processing"] = total_time
+        logger.info(f"Stage Latency: {result['latency']}")
+        logger.info(f"Total query processing time: {total_time:.2f}s")
         return result
 
     def _refine_query(self, raw_query: str, conversation_history: List[Dict]) -> str:
