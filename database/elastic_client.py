@@ -1,5 +1,6 @@
 import logging
 import os
+import time  # Adding missing import for timestamp
 from typing import Any, Dict, List, Optional
 
 from elasticsearch import Elasticsearch
@@ -24,7 +25,9 @@ class ElasticClient:
         """
         # Get config
         elasticsearch_config = get_api_config("elasticsearch")
-        self.url = url or elasticsearch_config["url"]
+        
+        # Use environment variable with proper Kubernetes service name instead of localhost
+        self.url = url or os.getenv("ELASTICSEARCH_URL", "http://elasticsearch:9200") or elasticsearch_config["url"]
 
         # Initialize the client
         self.client = Elasticsearch(hosts=[self.url])
