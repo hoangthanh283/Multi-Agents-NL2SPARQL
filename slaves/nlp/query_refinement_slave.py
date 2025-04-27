@@ -1,4 +1,5 @@
 import time
+import uuid
 from typing import Any, Dict, List
 
 from prometheus_client import Counter, Histogram
@@ -24,6 +25,7 @@ class QueryRefinementSlave(AbstractSlave):
             config: Configuration dictionary
         """
         self.config = config or {}
+        self.instance_id = str(uuid.uuid4())[:8]  # Generate a unique ID for this instance
         
         try:
             # Initialize the query refinement agent
@@ -39,14 +41,14 @@ class QueryRefinementSlave(AbstractSlave):
             logger.error(f"Error initializing QueryRefinementSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
+        # Metrics with unique instance ID to prevent conflicts
         self.task_counter = Counter(
-            'query_refinement_tasks_total',
+            f'query_refinement_tasks_total_{self.instance_id}',
             'Total query refinement tasks processed',
             ['status']
         )
         self.processing_time = Histogram(
-            'query_refinement_processing_seconds',
+            f'query_refinement_processing_seconds_{self.instance_id}',
             'Time spent processing query refinement tasks'
         )
         

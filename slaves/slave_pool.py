@@ -71,7 +71,7 @@ class SlavePool:
         self.scaling_thread = None
         
         # Load balancer and health checker
-        self.load_balancer = LoadBalancer(algorithm="round_robin")
+        self.load_balancer = LoadBalancer()
         from utils.health_checker import \
             HealthChecker  # Move this import to break the circular dependency
         self.health_checker = HealthChecker(

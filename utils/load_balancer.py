@@ -22,6 +22,23 @@ class LoadBalancer:
         self.active_connections = defaultdict(int)
         self.last_used_index = defaultdict(int)
         self.service_weights: Dict[str, Dict[str, float]] = defaultdict(dict)
+        self.current_index = 0  # For simple round-robin selection
+        
+    def select(self, indices):
+        """
+        Simple round-robin selection from a list of indices
+        
+        Args:
+            indices: List of indices to select from
+            
+        Returns:
+            Selected index
+        """
+        if not indices:
+            return None
+            
+        self.current_index = (self.current_index + 1) % len(indices)
+        return indices[self.current_index]
 
     @circuit_breaker('load_balancer')
     async def get_next_instance(self, service_type: str, strategy: str = 'round_robin') -> Optional[Dict]:
