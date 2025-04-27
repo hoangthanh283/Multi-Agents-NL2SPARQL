@@ -197,6 +197,17 @@ class SlavePoolManager:
             max_size = pool_config.get("max_size", 10)
             slave_config = pool_config.get("slave_config", {})
             
+            # Create a separate registry for each slave type to avoid conflicts
+            from prometheus_client import CollectorRegistry
+            registry = CollectorRegistry()
+            
+            # Deep copy slave_config to avoid modifying the original
+            import copy
+            slave_config_copy = copy.deepcopy(slave_config)
+            
+            # Add registry to slave config
+            slave_config_copy["registry"] = registry
+            
             try:
                 # Create and start the pool
                 pool = SlavePool(
@@ -206,7 +217,7 @@ class SlavePoolManager:
                     redis_url=self.redis_url,
                     initial_size=initial_size,
                     max_size=max_size,
-                    slave_config=slave_config
+                    slave_config=slave_config_copy  # Use the copy with the registry
                 )
                 pool.start()
                 

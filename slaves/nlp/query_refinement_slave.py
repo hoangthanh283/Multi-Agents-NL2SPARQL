@@ -1,11 +1,13 @@
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
 from agents.query_refinement import QueryRefinementAgent
+from database.qdrant_client import QdrantClientWrapper
+from models.embeddings import BiEncoderModel
 from slaves.base import AbstractSlave
 from utils.logging_utils import setup_logging
 
@@ -17,19 +19,30 @@ class QueryRefinementSlave(AbstractSlave):
     Wraps the existing QueryRefinementAgent through an adapter.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, registry: CollectorRegistry = None, qdrant_client: Optional[QdrantClientWrapper] = None):
         """
         Initialize the query refinement slave.
         
         Args:
             config: Configuration dictionary
+            registry: Optional custom Prometheus registry to avoid metric conflicts
+            qdrant_client: Optional Qdrant client for vector embeddings
         """
         self.config = config or {}
         self.instance_id = str(uuid.uuid4())[:8]  # Generate a unique ID for this instance
+        self.registry = registry  # Use provided registry or default
         
         try:
-            # Initialize the query refinement agent
-            agent = QueryRefinementAgent()
+            # Try to get qdrant_client from config if not provided directly
+            if qdrant_client is None and "qdrant_client" in self.config:
+                qdrant_client = self.config["qdrant_client"]
+            
+            # Initialize the query refinement agent with or without the qdrant client
+            if qdrant_client:
+                agent = QueryRefinementAgent(qdrant_client=qdrant_client)
+            else:
+                # Initialize without qdrant client if not available
+                agent = QueryRefinementAgent()
             
             # Wrap the agent with an adapter
             self.agent_adapter = AgentAdapter(
@@ -43,13 +56,16 @@ class QueryRefinementSlave(AbstractSlave):
         
         # Metrics with unique instance ID to prevent conflicts
         self.task_counter = Counter(
-            f'query_refinement_tasks_total_{self.instance_id}',
+            'query_refinement_tasks_total',
             'Total query refinement tasks processed',
-            ['status']
+            ['status', 'instance'],
+            registry=self.registry
         )
         self.processing_time = Histogram(
-            f'query_refinement_processing_seconds_{self.instance_id}',
-            'Time spent processing query refinement tasks'
+            'query_refinement_processing_seconds',
+            'Time spent processing query refinement tasks',
+            ['instance'],
+            registry=self.registry
         )
         
         # Stats

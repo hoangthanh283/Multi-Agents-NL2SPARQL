@@ -1,4 +1,5 @@
 import os
+
 from celery import Celery
 
 # Set up Celery app (reuse config from tasks.py)

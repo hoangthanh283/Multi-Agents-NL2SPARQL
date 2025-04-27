@@ -1,7 +1,8 @@
 import time
-from typing import Any, Dict
+import uuid
+from typing import Any, Dict, Optional
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
 from agents.query_execution import QueryExecutionAgent
@@ -16,14 +17,17 @@ class QueryExecutionSlave(AbstractSlave):
     Wraps the existing QueryExecutionAgent through an adapter.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, registry: Optional[CollectorRegistry] = None):
         """
         Initialize the query execution slave.
         
         Args:
             config: Configuration dictionary including endpoint settings
+            registry: Optional custom Prometheus registry to avoid metric conflicts
         """
         self.config = config or {}
+        self.instance_id = str(uuid.uuid4())[:8]  # Generate a unique ID for this instance
+        self.registry = registry  # Use provided registry or default
         
         # Get default endpoint from config if provided
         self.default_endpoint = self.config.get("endpoint_url")
@@ -42,15 +46,20 @@ class QueryExecutionSlave(AbstractSlave):
             logger.error(f"Error initializing QueryExecutionSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
+        # Metrics with unique instance ID to prevent conflicts
+        # Use a distinct metric name including instance_id to prevent conflicts
+        metric_suffix = f"_{self.instance_id}" if self.instance_id else ""
         self.task_counter = Counter(
-            'query_execution_tasks_total',
+            f'query_execution_tasks_total{metric_suffix}',
             'Total query execution tasks processed',
-            ['status']
+            ['status', 'instance'],
+            registry=self.registry
         )
         self.processing_time = Histogram(
-            'query_execution_processing_seconds',
-            'Time spent processing query execution tasks'
+            f'query_execution_processing_seconds{metric_suffix}',
+            'Time spent processing query execution tasks',
+            ['instance'],
+            registry=self.registry
         )
         
         # Stats
@@ -77,7 +86,7 @@ class QueryExecutionSlave(AbstractSlave):
             endpoint = parameters.get("endpoint", self.default_endpoint)
             
             if not sparql_query:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -86,7 +95,7 @@ class QueryExecutionSlave(AbstractSlave):
             
             # Check if agent adapter is initialized
             if not self.agent_adapter:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -100,14 +109,14 @@ class QueryExecutionSlave(AbstractSlave):
             })
             
             if not result.get("success", False):
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return result
                 
             query_results = result.get("result", {}).get("results", {})
             
             # Update metrics
-            self.task_counter.labels(status="success").inc()
+            self.task_counter.labels(status="success", instance=self.instance_id).inc()
             self.total_processed += 1
             self.successful_tasks += 1
             
@@ -117,7 +126,7 @@ class QueryExecutionSlave(AbstractSlave):
             }
         except Exception as e:
             # Update error metrics
-            self.task_counter.labels(status="error").inc()
+            self.task_counter.labels(status="error", instance=self.instance_id).inc()
             self.failed_tasks += 1
             
             logger.error(f"Error in QueryExecutionSlave: {e}")
@@ -127,7 +136,7 @@ class QueryExecutionSlave(AbstractSlave):
             }
         finally:
             # Record processing time
-            self.processing_time.observe(time.time() - start_time)
+            self.processing_time.labels(instance=self.instance_id).observe(time.time() - start_time)
     
     def report_status(self) -> Dict[str, Any]:
         """

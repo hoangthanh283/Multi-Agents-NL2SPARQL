@@ -1,7 +1,8 @@
 import time
-from typing import Any, Dict
+import uuid
+from typing import Any, Dict, Optional
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
 from agents.sparql_construction import SPARQLConstructionAgent
@@ -16,14 +17,17 @@ class SparqlConstructionSlave(AbstractSlave):
     Wraps the existing SPARQLConstructionAgent through an adapter.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, registry: Optional[CollectorRegistry] = None):
         """
         Initialize the SPARQL construction slave.
         
         Args:
             config: Configuration dictionary
+            registry: Optional custom Prometheus registry to avoid metric conflicts
         """
         self.config = config or {}
+        self.instance_id = str(uuid.uuid4())[:8]  # Generate a unique ID for this instance
+        self.registry = registry  # Use provided registry or default
         
         try:
             # Initialize the SPARQL construction agent
@@ -39,15 +43,20 @@ class SparqlConstructionSlave(AbstractSlave):
             logger.error(f"Error initializing SparqlConstructionSlave: {e}")
             self.agent_adapter = None
         
-        # Metrics
+        # Metrics with unique instance ID to prevent conflicts
+        # Use a distinct metric name including instance_id to prevent conflicts
+        metric_suffix = f"_{self.instance_id}" if self.instance_id else ""
         self.task_counter = Counter(
-            'sparql_construction_tasks_total',
+            f'sparql_construction_tasks_total{metric_suffix}',
             'Total SPARQL construction tasks processed',
-            ['status']
+            ['status', 'instance'],
+            registry=self.registry
         )
         self.processing_time = Histogram(
-            'sparql_construction_processing_seconds',
-            'Time spent processing SPARQL construction tasks'
+            f'sparql_construction_processing_seconds{metric_suffix}',
+            'Time spent processing SPARQL construction tasks',
+            ['instance'],
+            registry=self.registry
         )
         
         # Stats
@@ -74,7 +83,7 @@ class SparqlConstructionSlave(AbstractSlave):
             query_context = parameters.get("query_context", "")
             
             if not mapped_entities:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -83,7 +92,7 @@ class SparqlConstructionSlave(AbstractSlave):
             
             # Check if agent adapter is initialized
             if not self.agent_adapter:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -97,14 +106,14 @@ class SparqlConstructionSlave(AbstractSlave):
             })
             
             if not result.get("success", False):
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return result
                 
             sparql_query = result.get("result", {}).get("sparql_query", "")
             
             # Update metrics
-            self.task_counter.labels(status="success").inc()
+            self.task_counter.labels(status="success", instance=self.instance_id).inc()
             self.total_processed += 1
             self.successful_tasks += 1
             
@@ -114,7 +123,7 @@ class SparqlConstructionSlave(AbstractSlave):
             }
         except Exception as e:
             # Update error metrics
-            self.task_counter.labels(status="error").inc()
+            self.task_counter.labels(status="error", instance=self.instance_id).inc()
             self.failed_tasks += 1
             
             logger.error(f"Error in SparqlConstructionSlave: {e}")
@@ -124,7 +133,7 @@ class SparqlConstructionSlave(AbstractSlave):
             }
         finally:
             # Record processing time
-            self.processing_time.observe(time.time() - start_time)
+            self.processing_time.labels(instance=self.instance_id).observe(time.time() - start_time)
     
     def report_status(self) -> Dict[str, Any]:
         """

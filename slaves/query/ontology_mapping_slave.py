@@ -1,11 +1,11 @@
 import time
-from typing import Any, Dict
+import uuid
+from typing import Any, Dict, List
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Histogram
 
 from adapters.agent_adapter import AgentAdapter
 from agents.ontology_mapping import OntologyMappingAgent
-from database.ontology_store import OntologyStore
 from slaves.base import AbstractSlave
 from utils.logging_utils import setup_logging
 
@@ -13,64 +13,54 @@ logger = setup_logging(app_name="nl-to-sparql", enable_colors=True)
 
 class OntologyMappingSlave(AbstractSlave):
     """
-    Slave responsible for mapping entities to ontology concepts.
-    Wraps the existing OntologyMappingAgent through an adapter to fit the slave interface.
+    Slave responsible for mapping recognized entities to ontology concepts.
+    Wraps the existing OntologyMappingAgent through an adapter.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, registry: CollectorRegistry = None):
         """
         Initialize the ontology mapping slave.
         
         Args:
-            config: Configuration dictionary including ontology settings
+            config: Configuration dictionary
+            registry: Optional custom Prometheus registry to avoid metric conflicts
         """
         self.config = config or {}
-        
-        # Initialize ontology store
-        ontology_config = self.config.get("ontology_config", {})
+        self.instance_id = str(uuid.uuid4())[:8]  # Generate a unique ID for this instance
+        self.registry = registry  # Use provided registry or default
         
         try:
-            # Initialize ontology store with available configuration
-            ontology_store = OntologyStore(**ontology_config) if ontology_config else OntologyStore()
-            
             # Initialize the ontology mapping agent
-            agent = OntologyMappingAgent(
-                ontology_store=ontology_store
-            )
+            agent = OntologyMappingAgent()
             
             # Wrap the agent with an adapter
             self.agent_adapter = AgentAdapter(
                 agent_instance=agent,
-                agent_type="ontology_mapping",
-                agent_method="map_entities"
+                agent_type="ontology_mapping"
             )
+            
         except Exception as e:
             logger.error(f"Error initializing OntologyMappingSlave: {e}")
-            # Create a placeholder adapter that will be properly initialized later
             self.agent_adapter = None
         
-        # Metrics
+        # Metrics with unique instance ID to prevent conflicts
         self.task_counter = Counter(
             'ontology_mapping_tasks_total',
             'Total ontology mapping tasks processed',
-            ['status']
+            ['status', 'instance'],
+            registry=self.registry
         )
         self.processing_time = Histogram(
             'ontology_mapping_processing_seconds',
-            'Time spent processing ontology mapping tasks'
-        )
-        self.entity_counter = Counter(
-            'ontology_mapping_entities_total',
-            'Total entities mapped to ontology concepts',
-            ['mapped_status']
+            'Time spent processing ontology mapping tasks',
+            ['instance'],
+            registry=self.registry
         )
         
         # Stats
         self.total_processed = 0
         self.successful_tasks = 0
         self.failed_tasks = 0
-        self.total_entities_mapped = 0
-        self.total_entities_unmapped = 0
         self.start_time = time.time()
         
         logger.info("OntologyMappingSlave initialized")
@@ -87,11 +77,11 @@ class OntologyMappingSlave(AbstractSlave):
         """
         start_time = time.time()
         try:
-            entities = parameters.get("entities", [])
+            entities = parameters.get("entities", {})
             query_context = parameters.get("query_context", "")
             
             if not entities:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -100,7 +90,7 @@ class OntologyMappingSlave(AbstractSlave):
             
             # Check if agent adapter is initialized
             if not self.agent_adapter:
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return {
                     "success": False,
@@ -114,29 +104,16 @@ class OntologyMappingSlave(AbstractSlave):
             })
             
             if not result.get("success", False):
-                self.task_counter.labels(status="error").inc()
+                self.task_counter.labels(status="error", instance=self.instance_id).inc()
                 self.failed_tasks += 1
                 return result
                 
             mapped_entities = result.get("result", {}).get("mapped_entities", {})
             
-            # Count mapped vs. unmapped entities for metrics
-            mapped_count = 0
-            unmapped_count = 0
-            
-            for entity_type in ["classes", "properties", "instances"]:
-                mapped_count += len(mapped_entities.get(entity_type, []))
-            
-            unmapped_count = len(mapped_entities.get("unknown", []))
-            
             # Update metrics
-            self.task_counter.labels(status="success").inc()
+            self.task_counter.labels(status="success", instance=self.instance_id).inc()
             self.total_processed += 1
             self.successful_tasks += 1
-            self.total_entities_mapped += mapped_count
-            self.total_entities_unmapped += unmapped_count
-            self.entity_counter.labels(mapped_status="mapped").inc(mapped_count)
-            self.entity_counter.labels(mapped_status="unmapped").inc(unmapped_count)
             
             return {
                 "success": True,
@@ -144,7 +121,7 @@ class OntologyMappingSlave(AbstractSlave):
             }
         except Exception as e:
             # Update error metrics
-            self.task_counter.labels(status="error").inc()
+            self.task_counter.labels(status="error", instance=self.instance_id).inc()
             self.failed_tasks += 1
             
             logger.error(f"Error in OntologyMappingSlave: {e}")
@@ -154,7 +131,7 @@ class OntologyMappingSlave(AbstractSlave):
             }
         finally:
             # Record processing time
-            self.processing_time.observe(time.time() - start_time)
+            self.processing_time.labels(instance=self.instance_id).observe(time.time() - start_time)
     
     def report_status(self) -> Dict[str, Any]:
         """
@@ -164,8 +141,6 @@ class OntologyMappingSlave(AbstractSlave):
             Dictionary with status information
         """
         uptime = time.time() - self.start_time
-        total_entities = self.total_entities_mapped + self.total_entities_unmapped
-        mapping_rate = self.total_entities_mapped / max(1, total_entities) * 100
         
         # Include adapter status if available
         adapter_status = self.agent_adapter.get_status() if self.agent_adapter else {"status": "unavailable"}
@@ -178,10 +153,6 @@ class OntologyMappingSlave(AbstractSlave):
             "successful_tasks": self.successful_tasks,
             "failed_tasks": self.failed_tasks,
             "success_rate": self.successful_tasks / max(1, self.total_processed) * 100,
-            "total_entities": total_entities,
-            "mapped_entities": self.total_entities_mapped,
-            "unmapped_entities": self.total_entities_unmapped,
-            "mapping_rate": mapping_rate,
             "adapter": adapter_status
         }
     

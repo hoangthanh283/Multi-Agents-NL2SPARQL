@@ -74,10 +74,7 @@ class SlavePool:
         self.load_balancer = LoadBalancer()
         from utils.health_checker import \
             HealthChecker  # Move this import to break the circular dependency
-        self.health_checker = HealthChecker(
-            check_interval=30,
-            failure_threshold=3
-        )
+        self.health_checker = HealthChecker(check_interval=30)
         
         # Task queue
         self.pending_tasks = []
@@ -110,9 +107,12 @@ class SlavePool:
         Args:
             size: Number of slaves to create
         """
+        # Extract registry from config if available
+        registry = self.slave_config.get("registry", None)
+        
         for _ in range(size):
             try:
-                slave = self.slave_class(config=self.slave_config)
+                slave = self.slave_class(config=self.slave_config, registry=registry)
                 self.slaves.append(slave)
                 self.last_used.append(0)
             except Exception as e:
@@ -323,7 +323,10 @@ class SlavePool:
     def _scale_up(self):
         """Add a new slave to the pool."""
         try:
-            slave = self.slave_class(config=self.slave_config)
+            # Extract registry from config if available
+            registry = self.slave_config.get("registry", None)
+            
+            slave = self.slave_class(config=self.slave_config, registry=registry)
             
             with self.task_lock:
                 self.slaves.append(slave)
@@ -353,6 +356,9 @@ class SlavePool:
     
     def _replace_unhealthy_slaves(self):
         """Replace any unhealthy slaves in the pool."""
+        # Extract registry from config if available
+        registry = self.slave_config.get("registry", None)
+        
         with self.task_lock:
             for i in range(len(self.slaves)):
                 if not self._is_slave_healthy(i):
@@ -360,7 +366,7 @@ class SlavePool:
                         logger.warning(f"Replacing unhealthy slave in {self.domain}/{self.slave_type} pool")
                         
                         # Create a new slave
-                        self.slaves[i] = self.slave_class(config=self.slave_config)
+                        self.slaves[i] = self.slave_class(config=self.slave_config, registry=registry)
                         self.last_used[i] = time.time()
                         
                     except Exception as e:

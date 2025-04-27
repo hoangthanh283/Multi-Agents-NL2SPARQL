@@ -7,6 +7,6 @@ spec:
     app: nl2sparql-api
   ports:
     - protocol: TCP
-      port: 8000
-      targetPort: 8000
+      port: 8001
+      targetPort: 8001
   type: LoadBalancer
