@@ -1,0 +1,47 @@
+{
+	"name": "Python 3",
+	"dockerComposeFile": "../docker-compose.yml",
+	"runServices": [
+        "qdrant",
+        "elasticsearch",
+        "graphdb"
+    ],
+	"runArgs": [
+		"--gpus",
+		"all"
+    ],
+	"service": "devcontainer",
+	"workspaceFolder": "/workspace",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.jupyter-keymap",
+				"ms-toolsai.jupyter-renderers",
+				"vscode-icons-team.vscode-icons",
+				"bierner.markdown-mermaid"
+			]
+		},
+		"settings": {
+			"python.pythonPath": "/usr/local/bin/python"
+		}
+	},
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake && pip install --upgrade pip && pip3 install --user -r requirements.txt",
+	"remoteEnv": {
+		"ELASTICSEARCH_URL": "http://elasticsearch:9200",
+		"GRAPHDB_ENDPOINT": "http://graphdb:7200",
+		"GRAPHDB_REPOSITORY": "CHeVIE",
+		"GRAPHDB_URL": "http://graphdb:7200",
+		"ONTOLOGY_PATH": "assets/ontologies/CHeVIE_comment.owl",
+		"OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
+		"QDRANT_URL": "http://qdrant:6333",
+		"QDRANT_SEARCH_THRESHOLD": "0.6",
+		"SPARQL_ENDPOINT": "",
+		"SPARQL_AUTH_TOKEN": "",
+		"SPARQL_DEFAULT_GRAPH": "",
+		"TOP_K_DRANT_QUERIES": "5",
+		"VECTOR_SIMILARITY_THRESHOLD": "0.25"
+	}
+}
