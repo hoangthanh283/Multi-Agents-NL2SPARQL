@@ -51,6 +51,16 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia        # use the NVIDIA runtime
+              count: all            # expose every available GPU
+              capabilities: [gpu]   # only the GPU capability is needed
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
