@@ -7,7 +7,7 @@ from rdflib import Graph, Literal, URIRef
 from rdflib.namespace import OWL, RDF, RDFS
 from sentence_transformers import SentenceTransformer
 
-from config.agent_config import OPEN_API_KEY
+from config.agent_config import get_agent_config
 from database.ontology_store import OntologyStore
 
 
@@ -70,16 +70,7 @@ class OntologyMappingAgent:
         self.property_domains_ranges = self._build_property_domains_ranges()
         
         # Initialize LLM agent for complex mappings
-        agent_config = {
-            "name": "OntologyMappingAssistant",
-            "system_message": """You are an ontology mapping specialist. 
-Your task is to map natural language terms to formal ontology terms.
-Analyze the context, term descriptions, and ontology structure to find the best matches.""",
-            "llm_config": {
-                "config_list": [{"model": "gpt-4o-mini", "api_key": OPEN_API_KEY}],
-                "temperature": 0.0
-            }
-        }
+        agent_config = get_agent_config("ontology_mapping")
         
         self.agent = autogen.AssistantAgent(
             name=agent_config["name"],
