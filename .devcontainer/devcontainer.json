@@ -4,7 +4,8 @@
 	"runServices": [
         "qdrant",
         "elasticsearch",
-        "graphdb"
+        "graphdb",
+		"ollama"
     ],
 	"runArgs": [
 		"--gpus",
@@ -26,12 +27,21 @@
 	},
 	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y cmake && pip install --upgrade pip && pip3 install --user -r requirements.txt",
 	"remoteEnv": {
+		"AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
+		"AZURE_OPENAI_ENDPOINT": "${localEnv:AZURE_OPENAI_ENDPOINT}",
+		"AZURE_OPENAI_MODEL": "${localEnv:AZURE_OPENAI_MODEL}",
+		"AZURE_OPENAI_API_VERSION": "${localEnv:AZURE_OPENAI_API_VERSION}",
+		"AZURE_OPENAI_DEPLOYMENT_NAME": "${localEnv:AZURE_OPENAI_DEPLOYMENT_NAME}",
 		"ELASTICSEARCH_URL": "http://elasticsearch:9200",
 		"GRAPHDB_ENDPOINT": "http://graphdb:7200",
 		"GRAPHDB_REPOSITORY": "CHeVIE",
-		"GRAPHDB_URL": "http://graphdb:7200",
+		"GRAPHDB_URL": "http://graphdb:7200/repositories/",
+		"LLM_PROVIDER": "ollama",
 		"ONTOLOGY_PATH": "assets/ontologies/CHeVIE_comment.owl",
-		"OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
+		"OLLAMA_BASE_URL": "http://ollama:11434/v1",
+		"OLLAMA_MODEL": "llama3.2:3b",
+		"OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+		"OPENAI_MODEL": "gpt-4o-mini",
 		"QDRANT_URL": "http://qdrant:6333",
 		"QDRANT_SEARCH_THRESHOLD": "0.6",
 		"SPARQL_ENDPOINT": "",
