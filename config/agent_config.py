@@ -6,8 +6,8 @@ from typing import Any, Dict
 #    (all look-ups are now inlined below)
 # ---------------------------------------------------------------------------
 
-# Choose provider: "openai" | "azure" | "ollama"         (defaults to ollama)
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+# Choose provider: "openai" | "azure" | "ollama"         (defaults to openai)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
 
 # ---------------------------------------------------------------------------
 # 2. Build the provider-specific config_list
