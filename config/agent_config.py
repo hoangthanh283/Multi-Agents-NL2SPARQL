@@ -1,17 +1,55 @@
 import os
 from typing import Any, Dict
 
-OPEN_API_KEY = os.getenv("OPENAI_API_KEY")
+# ---------------------------------------------------------------------------
+# 1. Keys / endpoints from the host environment
+#    (all look-ups are now inlined below)
+# ---------------------------------------------------------------------------
 
-# Define LLM configuration
-LLM_CONFIG = {
-    "config_list": [
+# Choose provider: "openai" | "azure" | "ollama"         (defaults to ollama)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+
+# ---------------------------------------------------------------------------
+# 2. Build the provider-specific config_list
+# ---------------------------------------------------------------------------
+if LLM_PROVIDER == "openai":
+    _CONFIG_LIST = [
         {
-            # "model": "gpt-3.5-turbo-16k",
-            "model": "gpt-4o-mini",
-            "api_key": OPEN_API_KEY,
+            "model": os.getenv("OPENAI_MODEL"),
+            "api_key": os.getenv("OPENAI_API_KEY"),
+            # No base_url → platform default (api.openai.com)
         }
-    ],
+    ]
+
+elif LLM_PROVIDER == "azure":
+    _CONFIG_LIST = [
+        {
+            "model": os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+            "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
+            "base_url": os.getenv("AZURE_OPENAI_ENDPOINT"),
+            "api_type": "azure",
+            "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
+        }
+    ]
+
+elif LLM_PROVIDER == "ollama":
+    _CONFIG_LIST = [
+        {
+            "model": os.getenv("OLLAMA_MODEL"),
+            "base_url": os.getenv("OLLAMA_BASE_URL"),
+            # Ollama normally ignores api_key; keep it for drop-in compatibility
+            "api_key": os.getenv("OPENAI_API_KEY"),
+        }
+    ]
+
+else:
+    raise ValueError(f"Unsupported LLM_PROVIDER: {LLM_PROVIDER}")
+
+# ---------------------------------------------------------------------------
+# 3. Unified LLM_CONFIG
+# ---------------------------------------------------------------------------
+LLM_CONFIG: Dict[str, Any] = {
+    "config_list": _CONFIG_LIST,
     "temperature": 0.0,
     "timeout": 600,
 }
